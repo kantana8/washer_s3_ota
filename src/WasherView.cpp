@@ -1949,9 +1949,9 @@ void WasherView::buildPages() {
   pauseText_.align(Align::BottomCenter, 0, -72);
   lv_obj_set_style_text_align(pauseText_.native(), LV_TEXT_ALIGN_CENTER, 0);
 
-  // Lao Secondary Helpful Message ("ກະລຸນາລໍຖ້າສັກຄູ່...")
+  // Lao Secondary Helpful Message ("ກະລຸນາລໍຖ້າ...")
   lv_obj_t* pWaitLao = lv_label_create(pauseConsole_);
-  lv_label_set_text(pWaitLao, shapeLaoText("ກະລຸນາລໍຖ້າສັກຄູ່...").c_str());
+  lv_label_set_text(pWaitLao, shapeLaoText("ກະລຸນາລໍຖ້າ...").c_str());
   lv_obj_set_style_text_font(pWaitLao, &notosanslao_shaped_20, 0);
   lv_obj_set_style_text_color(pWaitLao, lv_color_hex(0xFBBF24), 0);
   lv_obj_align(pWaitLao, LV_ALIGN_BOTTOM_MID, 0, -38);
