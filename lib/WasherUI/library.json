@@ -1,0 +1,11 @@
+{
+  "name": "WasherUI",
+  "version": "0.2.0",
+  "description": "Independent LVGL UI and Hardware layer for the LCDWIKI ES3C35P (ESP32-S3) washer controller",
+  "keywords": ["esp32s3", "lvgl", "st77922", "es8311", "ui"],
+  "frameworks": ["arduino"],
+  "platforms": ["espressif32"],
+  "dependencies": {
+    "lvgl/lvgl": "^8.4.0"
+  }
+}
