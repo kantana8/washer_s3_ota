@@ -182,6 +182,7 @@ void WasherController::update() {
 void WasherController::onOptionSelected(uint8_t option) {
   if (option < 1 || option > 3) return;
   if (activeOption_) {
+    runningPreviewUntil_ = millis() + 5000U;
     view_.show(Page::Running);
     view_.setCountdown(remainingSeconds_, activeOption_);
     return;
@@ -204,7 +205,7 @@ void WasherController::onOptionSelected(uint8_t option) {
 
 void WasherController::onPricePageOpened() {
   if (activeOption_) {
-    runningPreviewUntil_ = 0;
+    runningPreviewUntil_ = millis() + 5000U;
     view_.show(Page::Running);
     view_.setCountdown(remainingSeconds_, activeOption_);
     return;

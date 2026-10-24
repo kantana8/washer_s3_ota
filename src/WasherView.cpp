@@ -1607,7 +1607,7 @@ void WasherView::buildPages() {
   lv_obj_set_style_text_line_space(runningText_.native(), 2, 0);
 
   lv_obj_t* indSub = lv_label_create(runConsole);
-  lv_label_set_text(indSub, "INDUSTRIAL WASH IN PROGRESS");
+  lv_label_set_text(indSub, "WASHING IN PROGRESS");
   lv_obj_set_style_text_font(indSub, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(indSub, lv_color_hex(0x10B981), 0);
   lv_obj_align(indSub, LV_ALIGN_BOTTOM_MID, 0, -10);
