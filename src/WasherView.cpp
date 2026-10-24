@@ -1837,6 +1837,7 @@ void WasherView::buildSettings() {
 
 void WasherView::show(Page page) {
   Serial.printf("[UI] show page %u, heap=%u\n", static_cast<unsigned>(page), ESP.getFreeHeap());
+  const Page prevPage = currentPage_;
   currentPage_ = page;
   pageEnteredAt_ = millis();
   Rect* pages[] = {&home_, &select_, &qr_, &payment_, &paymentSuccess_, &running_, &success_, &pause_, &pinPage_, &settingsPage_, &wifiScanPage_};
@@ -1869,12 +1870,43 @@ void WasherView::show(Page page) {
     else lv_obj_clear_flag(netGlobe_, LV_OBJ_FLAG_HIDDEN);
   }
 
+  if (page == Page::Settings && prevPage != Page::WifiScan && settings_) {
+    settings_->load();
+    if (terminalInput_) lv_textarea_set_text(terminalInput_, settings_->terminalId.c_str());
+    if (pinInput_) lv_textarea_set_text(pinInput_, settings_->settingsPin.c_str());
+    if (wifiSsidInput_) lv_textarea_set_text(wifiSsidInput_, settings_->wifiSsid.c_str());
+    if (wifiPasswordInput_) lv_textarea_set_text(wifiPasswordInput_, settings_->wifiPassword.c_str());
+    if (wifiSsid2Input_) lv_textarea_set_text(wifiSsid2Input_, settings_->wifiSsid2.c_str());
+    if (wifiPassword2Input_) lv_textarea_set_text(wifiPassword2Input_, settings_->wifiPassword2.c_str());
+    if (wifiSwitch_[0]) {
+      if (settings_->wifiEnabled1) lv_obj_add_state(wifiSwitch_[0], LV_STATE_CHECKED);
+      else lv_obj_clear_state(wifiSwitch_[0], LV_STATE_CHECKED);
+    }
+    if (wifiSwitch_[1]) {
+      if (settings_->wifiEnabled2) lv_obj_add_state(wifiSwitch_[1], LV_STATE_CHECKED);
+      else lv_obj_clear_state(wifiSwitch_[1], LV_STATE_CHECKED);
+    }
+    if (brightnessSlider_) lv_slider_set_value(brightnessSlider_, settings_->brightness, LV_ANIM_OFF);
+    if (brightnessValue_) lv_label_set_text_fmt(brightnessValue_, "%u", settings_->brightness);
+    if (volumeSlider_) lv_slider_set_value(volumeSlider_, settings_->volume, LV_ANIM_OFF);
+    if (volumeValue_) lv_label_set_text_fmt(volumeValue_, "%u%%", settings_->volume);
+    for (uint8_t i = 0; i < 3; ++i) {
+      if (timeDropdown_[i]) lv_dropdown_set_selected(timeDropdown_[i], settings_->durationMinutes[i] - 1);
+    }
+    updateOptionTabDisplay();
+  }
+
   if (page != Page::Settings) {
     if (keyboard_) lv_obj_add_flag(keyboard_, LV_OBJ_FLAG_HIDDEN);
     if (keyboardPreviewCont_) lv_obj_add_flag(keyboardPreviewCont_, LV_OBJ_FLAG_HIDDEN);
     if (saveBackdrop_) lv_obj_add_flag(saveBackdrop_, LV_OBJ_FLAG_HIDDEN);
     if (saveModal_) lv_obj_add_flag(saveModal_, LV_OBJ_FLAG_HIDDEN);
     activeTargetTextArea_ = nullptr;
+    if (prevPage == Page::Settings && page != Page::WifiScan && settings_) {
+      settings_->load();
+      washerui::App.brightness(settings_->brightness);
+      washerui::App.volume(settings_->volume);
+    }
   }
 }
 

@@ -162,8 +162,9 @@ void WasherController::update() {
     successUntil_ = 0;
     view_.hideResetPopup();
     view_.show(Page::Home);
-    for (uint8_t option = 1; option <= 3; ++option) {
-      publish(countdownTopic(option), "{\"current_page\":0,\"countdown\":0}", true);
+    if (lastFinishedOption_) {
+      publish(countdownTopic(lastFinishedOption_), "{\"current_page\":0,\"countdown\":0}", true);
+      lastFinishedOption_ = 0;
     }
   }
 }
@@ -198,9 +199,13 @@ void WasherController::onPricePageOpened() {
 }
 
 void WasherController::onBackRequested() {
-  pageTimeoutAt_ = 0;
-  if (view_.page() == Page::QrCode) view_.show(Page::Select);
-  else view_.show(Page::Home);
+  if (view_.page() == Page::QrCode) {
+    view_.show(Page::Select);
+    pageTimeoutAt_ = millis() + config::PageTimeoutMs;
+  } else {
+    pageTimeoutAt_ = 0;
+    view_.show(Page::Home);
+  }
 }
 
 void WasherController::onSettingsSaved() {
@@ -349,7 +354,9 @@ void WasherController::reconnectMqtt() {
 
 void WasherController::subscribeTopics() {
   mqtt_.subscribe(tidTopic("/#").c_str());
-  mqtt_.subscribe((settings_.terminalId + "/#").c_str());
+  mqtt_.subscribe((settings_.terminalId + "/ota").c_str());
+  mqtt_.subscribe((settings_.terminalId + "/pulse/statas").c_str());
+  mqtt_.subscribe((settings_.terminalId + "/pulse/status").c_str());
 }
 
 void WasherController::publish(const String& topic, const String& message, bool retained) {
@@ -402,6 +409,7 @@ void WasherController::finishWash() {
   const uint8_t finishedOption = activeOption_;
   view_.show(Page::Success);
   pendingWorkingDoneOption_ = finishedOption;
+  lastFinishedOption_ = finishedOption;
   publishCountdown();
   if (mqtt_.connected()) {
     publish("tid/status", settings_.terminalId + "/working_done/option" + String(finishedOption));
@@ -421,13 +429,12 @@ void WasherController::stopWash(bool notifyServer) {
   paymentUntil_ = 0;
   paymentSuccessUntil_ = 0;
   successUntil_ = 0;
+  lastFinishedOption_ = 0;
   digitalWrite(config::RelayPin, LOW);
   if (relayQueue) xQueueReset(relayQueue);
   clearRuntime();
   for (uint8_t option = 1; option <= 3; ++option) {
-    char json[48];
-    snprintf(json, sizeof(json), "{\"current_page\":0,\"countdown\":0}");
-    publish(countdownTopic(option), json, true);
+    publish(countdownTopic(option), "{\"current_page\":0,\"countdown\":0}", true);
   }
   if (notifyServer) publish("tid/status", settings_.terminalId + "/stopped");
   beep(1);

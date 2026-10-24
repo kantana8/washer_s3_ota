@@ -75,5 +75,6 @@ class WasherController : public WasherViewListener {
   bool wifiWasConnected_ = false;
   bool isScanningWifi_ = false;
   uint8_t pendingWorkingDoneOption_ = 0;
+  uint8_t lastFinishedOption_ = 0;
   bool isUpdatingOta_ = false;
 };
