@@ -2,6 +2,7 @@
 #include <WasherUI.h>
 #include <esp_task_wdt.h>
 
+#include "AppConfig.h"
 #include "AppSettings.h"
 #include "WasherController.h"
 #include "WasherView.h"
@@ -11,6 +12,10 @@ WasherView view;
 WasherController controller(settings, view);
 
 void setup() {
+  // Lock relay pin LOW immediately at power-on before any peripheral or splash init
+  pinMode(config::RelayPin, OUTPUT);
+  digitalWrite(config::RelayPin, LOW);
+
   Serial.begin(115200);
   delay(100);
   Serial.println("Washer Independent starting");

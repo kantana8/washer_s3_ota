@@ -63,9 +63,11 @@ void WasherController::begin() {
   }
   configTime(7 * 3600, 0, "pool.ntp.org", "time.google.com");
 
+  wifiClient_.setTimeout(2);
   mqtt_.setServer(config::MqttHost, config::MqttPort);
   mqtt_.setBufferSize(1024);
   mqtt_.setKeepAlive(30);
+  mqtt_.setSocketTimeout(2);
   mqtt_.setCallback(mqttThunk);
   loadRuntime();
   if (activeOption_ && remainingSeconds_ > 0) {
@@ -80,18 +82,8 @@ void WasherController::begin() {
 
 void WasherController::update() {
   if (isUpdatingOta_) return;
-  static Page tracedPage = Page::Settings;
-  const bool tracePhases = view_.page() != tracedPage;
-  if (tracePhases) {
-    tracedPage = view_.page();
-    Serial.printf("[TRACE] controller page %u begin\n", static_cast<unsigned>(tracedPage));
-  }
   view_.update();
-  if (tracePhases) Serial.println("[TRACE] view ok");
-  serviceRelay();
-  if (tracePhases) Serial.println("[TRACE] relay ok");
   serviceWifi();
-  if (tracePhases) Serial.println("[TRACE] wifi ok");
 
   const uint32_t now = millis();
   const bool wifiConnected = WiFi.status() == WL_CONNECTED;
@@ -99,13 +91,19 @@ void WasherController::update() {
     if (!mqtt_.connected() && now >= nextMqttAttemptAt_) reconnectMqtt();
     mqtt_.loop();
   }
-  if (tracePhases) Serial.println("[TRACE] mqtt ok");
-  view_.setConnection(wifiConnected, mqtt_.connected(), wifiConnected ? WiFi.RSSI() : -100);
-  view_.setActiveWifi(wifiProfile_, wifiConnected, wifiConnected ? WiFi.SSID() : "", wifiConnected ? WiFi.localIP().toString() : "");
-  if (tracePhases) Serial.println("[TRACE] connection UI ok");
+  const bool mqttConnected = mqtt_.connected();
+  static bool lastSyncWifi = false;
+  static bool lastSyncMqtt = false;
+  if (now >= nextUiSyncAt_ || wifiConnected != lastSyncWifi || mqttConnected != lastSyncMqtt) {
+    nextUiSyncAt_ = now + 500;
+    lastSyncWifi = wifiConnected;
+    lastSyncMqtt = mqttConnected;
+    view_.setConnection(wifiConnected, mqttConnected, wifiConnected ? WiFi.RSSI() : -100);
+    view_.setActiveWifi(wifiProfile_, wifiConnected, wifiConnected ? WiFi.SSID() : "", wifiConnected ? WiFi.localIP().toString() : "");
+  }
 
   // Connection Watchdog: show Page::Pause if MQTT disconnects for more than 30 seconds while idle
-  if (wifiConnected && mqtt_.connected()) {
+  if (wifiConnected && mqttConnected) {
     mqttDisconnectedAt_ = 0;
     // Auto-deliver pending wash completion if connection was restored
     if (pendingWorkingDoneOption_) {
@@ -155,7 +153,9 @@ void WasherController::update() {
     if (remainingSeconds_ > 0) --remainingSeconds_;
     view_.setCountdown(remainingSeconds_, activeOption_);
     publishCountdown();
-    saveRuntime();
+    if ((remainingSeconds_ % 15 == 0) || (remainingSeconds_ == 0)) {
+      saveRuntime();
+    }
     if (remainingSeconds_ == 0) finishWash();
   }
   if (successUntil_ && now >= successUntil_) {
@@ -166,7 +166,6 @@ void WasherController::update() {
       publish(countdownTopic(option), "{\"current_page\":0,\"countdown\":0}", true);
     }
   }
-  if (tracePhases) Serial.println("[TRACE] state timers ok");
 }
 
 void WasherController::onOptionSelected(uint8_t option) {
@@ -245,7 +244,7 @@ void WasherController::mqttThunk(char* topic, uint8_t* payload, unsigned int len
 void WasherController::handleMqtt(const String& topic, const String& message) {
   Serial.printf("[MQTT] %s -> %s\n", topic.c_str(), message.c_str());
   if (topic == tidTopic("/qrcode/res") || topic == settings_.terminalId + "/qrcode/res" ||
-      topic.endsWith("/qrcode/res") || topic.endsWith("/qrcode")) {
+      topic == tidTopic("/qrcode") || topic == settings_.terminalId + "/qrcode") {
     Serial.printf("[QR] Received QR payload: len=%u\n", message.length());
     view_.setQrCode(message);
     return;
@@ -314,8 +313,7 @@ void WasherController::handleMqtt(const String& topic, const String& message) {
   if (topic == settings_.terminalId + "/pulse/statas" || topic == settings_.terminalId + "/pulse/status") {
     publishConfiguration();
   }
-  if (topic == tidTopic("/ota") || topic == settings_.terminalId + "/ota" ||
-      topic.endsWith("/ota")) {
+  if (topic == tidTopic("/ota") || topic == settings_.terminalId + "/ota") {
     handleOtaRequest(message);
     return;
   }
@@ -352,17 +350,6 @@ void WasherController::reconnectMqtt() {
 void WasherController::subscribeTopics() {
   mqtt_.subscribe(tidTopic("/#").c_str());
   mqtt_.subscribe((settings_.terminalId + "/#").c_str());
-  mqtt_.subscribe(tidTopic("/status").c_str());
-  mqtt_.subscribe(tidTopic("/qrcode/res").c_str());
-  mqtt_.subscribe(tidTopic("/start_test").c_str());
-  mqtt_.subscribe(tidTopic("/ota").c_str());
-  mqtt_.subscribe((settings_.terminalId + "/ota").c_str());
-  mqtt_.subscribe((settings_.terminalId + "/pulse/statas").c_str());
-  mqtt_.subscribe((settings_.terminalId + "/pulse/status").c_str());
-  for (uint8_t option = 1; option <= 3; ++option) {
-    mqtt_.subscribe(tidTopic("/price/option" + String(option)).c_str());
-    mqtt_.subscribe(tidTopic("/start/option" + String(option)).c_str());
-  }
 }
 
 void WasherController::publish(const String& topic, const String& message, bool retained) {
@@ -459,10 +446,6 @@ void WasherController::publishCountdown() {
 void WasherController::beginRelayPulses(uint8_t count) {
   if (!count || !relayQueue) return;
   xQueueSend(relayQueue, &count, 0);
-}
-
-void WasherController::serviceRelay() {
-  // Handled with 100% hardware precision in dedicated FreeRTOS relayTask
 }
 
 void WasherController::connectWifiProfile(uint8_t profile) {

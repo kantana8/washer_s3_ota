@@ -1880,7 +1880,7 @@ void WasherView::show(Page page) {
 
 void WasherView::update() {
   const uint32_t now = millis();
-  if (now >= imageSwapAt_) {
+  if (currentPage_ == Page::Home && now >= imageSwapAt_) {
     imageSwapAt_ = now + 4000;
     alternateHomeImage_ = !alternateHomeImage_;
     homeImage_.source(alternateHomeImage_ ? &img_2 : &img_1);
@@ -2105,14 +2105,8 @@ void WasherView::setQrOption(uint8_t option) {
   if (qrLoadingBox_) {
     lv_obj_set_style_border_color(qrLoadingBox_, lv_color_hex(mainColors[idx]), 0);
   }
-  if (qrLoadingAccent_) {
-    lv_obj_set_style_bg_color(qrLoadingAccent_, lv_color_hex(mainColors[idx]), 0);
-  }
   if (qrCard_) {
     lv_obj_set_style_border_color(qrCard_, lv_color_hex(mainColors[idx]), 0);
-  }
-  if (qrCardAccent_) {
-    lv_obj_set_style_bg_color(qrCardAccent_, lv_color_hex(mainColors[idx]), 0);
   }
   if (qrLoadingHalo_) {
     lv_obj_set_style_bg_color(qrLoadingHalo_, lv_color_hex(haloColors[idx]), 0);
@@ -2248,8 +2242,6 @@ void WasherView::setConnection(bool wifiConnected, bool mqttConnected, int rssi)
       }
     }
   }
-
-  setWifiStatus(wifiConnected ? (mqttConnected ? "WiFi + Internet: ONLINE" : "WiFi: CONNECTED") : "WiFi: OFFLINE");
 }
 
 void WasherView::setWifiStatus(const String& status) {
@@ -2406,17 +2398,6 @@ void WasherView::saveClicked(Object&, void*) {
   if (instance_) instance_->saveSettings();
 }
 
-void WasherView::testClicked(Object&, void* context) {
-  if (instance_ && instance_->listener_) {
-    const uint8_t option = static_cast<uint8_t>(reinterpret_cast<uintptr_t>(context));
-    uint8_t pulseCount = 1;
-    if (option >= 1 && option <= 3 && instance_->pulseDropdown_[option - 1]) {
-      pulseCount = lv_dropdown_get_selected(instance_->pulseDropdown_[option - 1]);
-    }
-    instance_->listener_->onRelayTest(option, pulseCount);
-  }
-}
-
 void WasherView::textAreaEvent(lv_event_t* event) {
   if (!instance_) return;
   const bool numeric = reinterpret_cast<uintptr_t>(lv_event_get_user_data(event)) != 0;
@@ -2480,9 +2461,6 @@ void WasherView::updateOptionTabDisplay() {
     uint8_t currentIdx = selectedOptionTab_ < 3 ? selectedOptionTab_ : 0;
     lv_label_set_text_fmt(optionPulseLabel_, "%u", settings_->pulseCount[currentIdx]);
   }
-}
-
-void WasherView::keyboardInputChangedEvent(lv_event_t*) {
 }
 
 void WasherView::keyboardEvent(lv_event_t* event) {
@@ -2666,6 +2644,21 @@ void WasherView::wifiSwitchEvent(lv_event_t* event) {
 }
 
 void WasherView::setActiveWifi(uint8_t profile, bool connected, const String& ssid, const String& ip) {
+  static bool initialized = false;
+  static uint8_t lastProfile = 0xFF;
+  static bool lastConnected = false;
+  static String lastSsid = "";
+  static String lastIp = "";
+
+  if (initialized && lastProfile == profile && lastConnected == connected && lastSsid == ssid && lastIp == ip) {
+    return;
+  }
+  initialized = true;
+  lastProfile = profile;
+  lastConnected = connected;
+  lastSsid = ssid;
+  lastIp = ip;
+
   if (wifiBadge_[0]) {
     bool active1 = connected && profile == 0;
     lv_label_set_text(wifiBadge_[0], active1 ? "ONLINE" : "OFFLINE");

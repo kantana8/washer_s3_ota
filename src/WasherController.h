@@ -38,7 +38,6 @@ class WasherController : public WasherViewListener {
   void finishWash();
   void stopWash(bool notifyServer);
   void beginRelayPulses(uint8_t count);
-  void serviceRelay();
   void serviceWifi();
   void connectWifiProfile(uint8_t profile);
   void saveRuntime();
@@ -66,12 +65,8 @@ class WasherController : public WasherViewListener {
   uint32_t successUntil_ = 0;
   uint32_t nextCountdownAt_ = 0;
   uint32_t nextMqttAttemptAt_ = 0;
-  uint32_t nextClockCheckAt_ = 0;
-  int restartedDay_ = -1;
+  uint32_t nextUiSyncAt_ = 0;
 
-  uint8_t relayEdgesRemaining_ = 0;
-  bool relayHigh_ = false;
-  uint32_t nextRelayEdgeAt_ = 0;
   uint32_t wifiAttemptStartedAt_ = 0;
   uint32_t profileActiveSince_ = 0;
   uint32_t mqttDisconnectedAt_ = 0;
