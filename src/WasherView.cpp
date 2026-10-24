@@ -735,7 +735,7 @@ void WasherView::buildPages() {
 
   lv_obj_add_flag(otaPopup_, LV_OBJ_FLAG_HIDDEN);
 
-  settingsButton_.parent(home_);
+  lv_obj_set_parent(settingsButton_.native(), topLayer);
   settingsButton_.size(44, 44);
   settingsButton_.align(Align::BottomRight, -10, -10);
   settingsButton_.color(0x263746);
@@ -1663,45 +1663,304 @@ void WasherView::buildPages() {
   successText_.align(Align::BottomCenter, 0, -24);
   lv_obj_set_style_text_align(successText_.native(), LV_TEXT_ALIGN_CENTER, 0);
 
-  configurePage(pause_, 0xF3FAFD); // Same light background as running page
-  pauseMachine_ = createWasherMachine(pause_.native(), 155, 30, 170, 202, 0xFFFFFF, &pauseDrum_);
-  lv_obj_set_style_arc_color(pauseDrum_, lv_color_hex(0xE85D55), LV_PART_INDICATOR);
-  lv_obj_set_style_arc_color(pauseDrum_, lv_color_hex(0xFEE2E2), LV_PART_MAIN);
+  // ==================== Industrial Out-of-Service / Standby Dashboard (Page::Pause) ====================
+  configurePage(pause_, 0x0B1522);
+  lv_obj_set_style_bg_grad_color(pause_.native(), lv_color_hex(0x1F1218), LV_PART_MAIN);
+  lv_obj_set_style_bg_grad_dir(pause_.native(), LV_GRAD_DIR_VER, LV_PART_MAIN);
 
-  pauseHalo_ = lv_obj_create(pauseDrum_);
-  lv_obj_set_size(pauseHalo_, 96, 96);
-  lv_obj_align(pauseHalo_, LV_ALIGN_CENTER, 0, 0);
+  // LEFT SIDE: Realistic Industrial Stainless-Steel Washer in Standby/Locked State (206x292 at x=12, y=14)
+  pauseMachine_ = lv_obj_create(pause_.native());
+  lv_obj_set_size(pauseMachine_, 206, 292);
+  lv_obj_set_pos(pauseMachine_, 12, 14);
+  lv_obj_set_style_radius(pauseMachine_, 14, 0);
+  lv_obj_set_style_bg_color(pauseMachine_, lv_color_hex(0xDCE4EC), 0);
+  lv_obj_set_style_bg_grad_color(pauseMachine_, lv_color_hex(0x9BA9B8), 0);
+  lv_obj_set_style_bg_grad_dir(pauseMachine_, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_border_width(pauseMachine_, 3, 0);
+  lv_obj_set_style_border_color(pauseMachine_, lv_color_hex(0xF8FAFC), 0);
+  lv_obj_set_style_shadow_width(pauseMachine_, 24, 0);
+  lv_obj_set_style_shadow_opa(pauseMachine_, LV_OPA_60, 0);
+  lv_obj_set_style_shadow_color(pauseMachine_, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_shadow_ofs_y(pauseMachine_, 6, 0);
+  lv_obj_set_style_pad_all(pauseMachine_, 0, 0);
+  lv_obj_clear_flag(pauseMachine_, LV_OBJ_FLAG_SCROLLABLE);
+
+  // Industrial Top Control Header Panel
+  lv_obj_t* pIndPanel = lv_obj_create(pauseMachine_);
+  lv_obj_set_size(pIndPanel, 190, 44);
+  lv_obj_set_pos(pIndPanel, 5, 6);
+  lv_obj_set_style_radius(pIndPanel, 8, 0);
+  lv_obj_set_style_bg_color(pIndPanel, lv_color_hex(0x1A1118), 0);
+  lv_obj_set_style_border_width(pIndPanel, 2, 0);
+  lv_obj_set_style_border_color(pIndPanel, lv_color_hex(0x475569), 0);
+  lv_obj_set_style_pad_all(pIndPanel, 0, 0);
+  lv_obj_clear_flag(pIndPanel, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* pDrawerSlot = lv_obj_create(pIndPanel);
+  lv_obj_set_size(pDrawerSlot, 46, 26);
+  lv_obj_set_pos(pDrawerSlot, 6, 7);
+  lv_obj_set_style_radius(pDrawerSlot, 4, 0);
+  lv_obj_set_style_bg_color(pDrawerSlot, lv_color_hex(0x1E293B), 0);
+  lv_obj_set_style_border_width(pDrawerSlot, 1, 0);
+  lv_obj_set_style_border_color(pDrawerSlot, lv_color_hex(0x475569), 0);
+  lv_obj_set_style_pad_all(pDrawerSlot, 0, 0);
+  lv_obj_clear_flag(pDrawerSlot, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* pDrawerHandle = lv_obj_create(pDrawerSlot);
+  lv_obj_set_size(pDrawerHandle, 28, 6);
+  lv_obj_align(pDrawerHandle, LV_ALIGN_CENTER, 0, 2);
+  lv_obj_set_style_radius(pDrawerHandle, 2, 0);
+  lv_obj_set_style_bg_color(pDrawerHandle, lv_color_hex(0x94A3B8), 0);
+  lv_obj_set_style_border_width(pDrawerHandle, 0, 0);
+
+  lv_obj_t* pBrandLbl = lv_label_create(pIndPanel);
+  lv_label_set_text(pBrandLbl, "STANDBY");
+  lv_obj_set_style_text_font(pBrandLbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(pBrandLbl, lv_color_hex(0xF59E0B), 0);
+  lv_obj_set_pos(pBrandLbl, 66, 12);
+
+  pauseStatusLed_ = lv_obj_create(pIndPanel);
+  lv_obj_set_size(pauseStatusLed_, 10, 10);
+  lv_obj_set_pos(pauseStatusLed_, 152, 15);
+  lv_obj_set_style_radius(pauseStatusLed_, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(pauseStatusLed_, lv_color_hex(0xEF4444), 0);
+  lv_obj_set_style_shadow_width(pauseStatusLed_, 10, 0);
+  lv_obj_set_style_shadow_color(pauseStatusLed_, lv_color_hex(0xEF4444), 0);
+  lv_obj_set_style_border_width(pauseStatusLed_, 0, 0);
+
+  lv_obj_t* pRotaryKnob = lv_obj_create(pIndPanel);
+  lv_obj_set_size(pRotaryKnob, 20, 20);
+  lv_obj_set_pos(pRotaryKnob, 165, 10);
+  lv_obj_set_style_radius(pRotaryKnob, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(pRotaryKnob, lv_color_hex(0xCBD5E1), 0);
+  lv_obj_set_style_border_width(pRotaryKnob, 2, 0);
+  lv_obj_set_style_border_color(pRotaryKnob, lv_color_hex(0x64748B), 0);
+
+  // Heavy-Duty Chrome Outer Door Bezel (164x164 centered at y=58)
+  lv_obj_t* pOuterDoor = lv_obj_create(pauseMachine_);
+  lv_obj_set_size(pOuterDoor, 164, 164);
+  lv_obj_align(pOuterDoor, LV_ALIGN_TOP_MID, 0, 58);
+  lv_obj_set_style_radius(pOuterDoor, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(pOuterDoor, lv_color_hex(0x64748B), 0);
+  lv_obj_set_style_bg_grad_color(pOuterDoor, lv_color_hex(0xCBD5E1), 0);
+  lv_obj_set_style_bg_grad_dir(pOuterDoor, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_border_width(pOuterDoor, 6, 0);
+  lv_obj_set_style_border_color(pOuterDoor, lv_color_hex(0x334155), 0);
+  lv_obj_set_style_shadow_width(pOuterDoor, 16, 0);
+  lv_obj_set_style_shadow_opa(pOuterDoor, LV_OPA_50, 0);
+  lv_obj_set_style_shadow_color(pOuterDoor, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_pad_all(pOuterDoor, 0, 0);
+  lv_obj_clear_flag(pOuterDoor, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* pDoorHinge = lv_obj_create(pauseMachine_);
+  lv_obj_set_size(pDoorHinge, 12, 38);
+  lv_obj_set_pos(pDoorHinge, 12, 121);
+  lv_obj_set_style_radius(pDoorHinge, 4, 0);
+  lv_obj_set_style_bg_color(pDoorHinge, lv_color_hex(0x475569), 0);
+  lv_obj_set_style_border_width(pDoorHinge, 1, 0);
+  lv_obj_set_style_border_color(pDoorHinge, lv_color_hex(0x94A3B8), 0);
+
+  lv_obj_t* pDoorHandle = lv_obj_create(pauseMachine_);
+  lv_obj_set_size(pDoorHandle, 14, 48);
+  lv_obj_set_pos(pDoorHandle, 174, 116);
+  lv_obj_set_style_radius(pDoorHandle, 5, 0);
+  lv_obj_set_style_bg_color(pDoorHandle, lv_color_hex(0x1E293B), 0);
+  lv_obj_set_style_border_width(pDoorHandle, 2, 0);
+  lv_obj_set_style_border_color(pDoorHandle, lv_color_hex(0x94A3B8), 0);
+
+  // Deep Crimson-Tinted Porthole Window (132x132 inside pOuterDoor)
+  lv_obj_t* pGlassWindow = lv_obj_create(pOuterDoor);
+  lv_obj_set_size(pGlassWindow, 132, 132);
+  lv_obj_center(pGlassWindow);
+  lv_obj_set_style_radius(pGlassWindow, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(pGlassWindow, lv_color_hex(0x160910), 0);
+  lv_obj_set_style_bg_grad_color(pGlassWindow, lv_color_hex(0x2E111D), 0);
+  lv_obj_set_style_bg_grad_dir(pGlassWindow, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_border_width(pGlassWindow, 3, 0);
+  lv_obj_set_style_border_color(pGlassWindow, lv_color_hex(0x94A3B8), 0);
+  lv_obj_set_style_pad_all(pGlassWindow, 0, 0);
+  lv_obj_set_style_clip_corner(pGlassWindow, true, 0);
+  lv_obj_clear_flag(pGlassWindow, LV_OBJ_FLAG_SCROLLABLE);
+
+  // Expanding Crimson Ripple Halo inside Porthole
+  pauseHalo_ = lv_obj_create(pGlassWindow);
+  lv_obj_set_size(pauseHalo_, 104, 104);
+  lv_obj_center(pauseHalo_);
   lv_obj_set_style_radius(pauseHalo_, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_bg_color(pauseHalo_, lv_color_hex(0xFECACA), 0);
-  lv_obj_set_style_bg_opa(pauseHalo_, LV_OPA_60, 0);
-  lv_obj_set_style_border_width(pauseHalo_, 0, 0);
+  lv_obj_set_style_bg_color(pauseHalo_, lv_color_hex(0xEF4444), 0);
+  lv_obj_set_style_bg_opa(pauseHalo_, LV_OPA_30, 0);
+  lv_obj_set_style_border_width(pauseHalo_, 2, 0);
+  lv_obj_set_style_border_color(pauseHalo_, lv_color_hex(0xF87171), 0);
   lv_obj_clear_flag(pauseHalo_, LV_OBJ_FLAG_SCROLLABLE);
 
-  // Solid red circle inside pause drum
-  lv_obj_t* pauseCircle = lv_obj_create(pauseDrum_);
-  lv_obj_set_size(pauseCircle, 78, 78);
-  lv_obj_align(pauseCircle, LV_ALIGN_CENTER, 0, 0);
-  lv_obj_set_style_radius(pauseCircle, LV_RADIUS_CIRCLE, 0);
-  lv_obj_set_style_bg_opa(pauseCircle, LV_OPA_COVER, 0);
-  lv_obj_set_style_bg_color(pauseCircle, lv_color_hex(0xDC2626), 0);
-  lv_obj_set_style_border_width(pauseCircle, 2, 0);
-  lv_obj_set_style_border_color(pauseCircle, lv_color_hex(0xFFFFFF), 0);
-  lv_obj_clear_flag(pauseCircle, LV_OBJ_FLAG_SCROLLABLE);
+  // Outer Counter-Rotating Warning Arc (Crimson)
+  pauseDrum_ = lv_arc_create(pGlassWindow);
+  lv_obj_set_size(pauseDrum_, 122, 122);
+  lv_obj_center(pauseDrum_);
+  lv_arc_set_bg_angles(pauseDrum_, 0, 360);
+  lv_arc_set_angles(pauseDrum_, 0, 200);
+  lv_obj_set_style_arc_width(pauseDrum_, 7, LV_PART_MAIN);
+  lv_obj_set_style_arc_color(pauseDrum_, lv_color_hex(0x3B1522), LV_PART_MAIN);
+  lv_obj_set_style_arc_width(pauseDrum_, 7, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_color(pauseDrum_, lv_color_hex(0xEF4444), LV_PART_INDICATOR);
+  lv_obj_set_style_arc_rounded(pauseDrum_, true, LV_PART_INDICATOR);
+  lv_obj_remove_style(pauseDrum_, nullptr, LV_PART_KNOB);
+  lv_obj_clear_flag(pauseDrum_, LV_OBJ_FLAG_CLICKABLE);
 
-  // Large white cross in the center of the red circle
+  // Inner Counter-Rotating Caution Arc (Amber Gold)
+  pauseInnerRing_ = lv_arc_create(pGlassWindow);
+  lv_obj_set_size(pauseInnerRing_, 98, 98);
+  lv_obj_center(pauseInnerRing_);
+  lv_arc_set_bg_angles(pauseInnerRing_, 0, 360);
+  lv_arc_set_angles(pauseInnerRing_, 0, 130);
+  lv_obj_set_style_arc_width(pauseInnerRing_, 5, LV_PART_MAIN);
+  lv_obj_set_style_arc_opa(pauseInnerRing_, LV_OPA_TRANSP, LV_PART_MAIN);
+  lv_obj_set_style_arc_width(pauseInnerRing_, 5, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_color(pauseInnerRing_, lv_color_hex(0xF59E0B), LV_PART_INDICATOR);
+  lv_obj_set_style_arc_rounded(pauseInnerRing_, true, LV_PART_INDICATOR);
+  lv_obj_remove_style(pauseInnerRing_, nullptr, LV_PART_KNOB);
+  lv_obj_clear_flag(pauseInnerRing_, LV_OBJ_FLAG_CLICKABLE);
+
+  // Central Pulsing Crimson Warning Shield Badge inside Porthole
+  pauseCircle_ = lv_obj_create(pGlassWindow);
+  lv_obj_set_size(pauseCircle_, 68, 68);
+  lv_obj_center(pauseCircle_);
+  lv_obj_set_style_radius(pauseCircle_, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_opa(pauseCircle_, LV_OPA_COVER, 0);
+  lv_obj_set_style_bg_color(pauseCircle_, lv_color_hex(0xDC2626), 0);
+  lv_obj_set_style_bg_grad_color(pauseCircle_, lv_color_hex(0x991B1B), 0);
+  lv_obj_set_style_bg_grad_dir(pauseCircle_, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_border_width(pauseCircle_, 3, 0);
+  lv_obj_set_style_border_color(pauseCircle_, lv_color_hex(0xFCA5A5), 0);
+  lv_obj_set_style_shadow_width(pauseCircle_, 14, 0);
+  lv_obj_set_style_shadow_color(pauseCircle_, lv_color_hex(0xEF4444), 0);
+  lv_obj_set_style_pad_all(pauseCircle_, 0, 0);
+  lv_obj_clear_flag(pauseCircle_, LV_OBJ_FLAG_SCROLLABLE);
+
   pauseIcon_.parent(pause_);
-  lv_obj_set_parent(pauseIcon_.native(), pauseCircle);
+  lv_obj_set_parent(pauseIcon_.native(), pauseCircle_);
   pauseIcon_.font(&lv_font_montserrat_36);
   pauseIcon_.textColor(0xFFFFFF);
-  pauseIcon_.text(LV_SYMBOL_CLOSE);
-  pauseIcon_.align(Align::Center, 0, 0);
+  pauseIcon_.text(LV_SYMBOL_WARNING);
+  pauseIcon_.align(Align::Center, 0, -2);
 
+  // Bottom Industrial Kickplate Grille
+  lv_obj_t* pKickPlate = lv_obj_create(pauseMachine_);
+  lv_obj_set_size(pKickPlate, 188, 44);
+  lv_obj_align(pKickPlate, LV_ALIGN_BOTTOM_MID, 0, -8);
+  lv_obj_set_style_radius(pKickPlate, 6, 0);
+  lv_obj_set_style_bg_color(pKickPlate, lv_color_hex(0x64748B), 0);
+  lv_obj_set_style_border_width(pKickPlate, 1, 0);
+  lv_obj_set_style_border_color(pKickPlate, lv_color_hex(0x475569), 0);
+  lv_obj_set_style_pad_all(pKickPlate, 0, 0);
+  lv_obj_clear_flag(pKickPlate, LV_OBJ_FLAG_SCROLLABLE);
+
+  for (uint8_t v = 0; v < 3; ++v) {
+    lv_obj_t* vent = lv_obj_create(pKickPlate);
+    lv_obj_set_size(vent, 120, 4);
+    lv_obj_set_pos(vent, 10, 9 + v * 10);
+    lv_obj_set_style_radius(vent, 2, 0);
+    lv_obj_set_style_bg_color(vent, lv_color_hex(0x1E293B), 0);
+    lv_obj_set_style_border_width(vent, 0, 0);
+  }
+
+  lv_obj_t* pDrainCap = lv_obj_create(pKickPlate);
+  lv_obj_set_size(pDrainCap, 28, 28);
+  lv_obj_align(pDrainCap, LV_ALIGN_RIGHT_MID, -10, 0);
+  lv_obj_set_style_radius(pDrainCap, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(pDrainCap, lv_color_hex(0x334155), 0);
+  lv_obj_set_style_border_width(pDrainCap, 2, 0);
+  lv_obj_set_style_border_color(pDrainCap, lv_color_hex(0x94A3B8), 0);
+
+  // RIGHT SIDE: Industrial Caution & Auto-Recovery Telemetry Console (240x292 at x=228, y=14)
+  pauseConsole_ = lv_obj_create(pause_.native());
+  lv_obj_set_size(pauseConsole_, 240, 292);
+  lv_obj_set_pos(pauseConsole_, 228, 14);
+  lv_obj_set_style_radius(pauseConsole_, 14, 0);
+  lv_obj_set_style_bg_color(pauseConsole_, lv_color_hex(0x18111A), 0);
+  lv_obj_set_style_bg_grad_color(pauseConsole_, lv_color_hex(0x0E0A12), 0);
+  lv_obj_set_style_bg_grad_dir(pauseConsole_, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_border_width(pauseConsole_, 2, 0);
+  lv_obj_set_style_border_color(pauseConsole_, lv_color_hex(0xEF4444), 0);
+  lv_obj_set_style_shadow_width(pauseConsole_, 20, 0);
+  lv_obj_set_style_shadow_opa(pauseConsole_, LV_OPA_50, 0);
+  lv_obj_set_style_shadow_color(pauseConsole_, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_pad_all(pauseConsole_, 0, 0);
+  lv_obj_clear_flag(pauseConsole_, LV_OBJ_FLAG_SCROLLABLE);
+
+  // Top Alert Banner Pill inside Console
+  lv_obj_t* pAlertPill = lv_obj_create(pauseConsole_);
+  lv_obj_set_size(pAlertPill, 216, 36);
+  lv_obj_align(pAlertPill, LV_ALIGN_TOP_MID, 0, 10);
+  lv_obj_set_style_radius(pAlertPill, 10, 0);
+  lv_obj_set_style_bg_color(pAlertPill, lv_color_hex(0xB91C1C), 0);
+  lv_obj_set_style_border_width(pAlertPill, 1, 0);
+  lv_obj_set_style_border_color(pAlertPill, lv_color_hex(0xFCA5A5), 0);
+  lv_obj_set_style_pad_all(pAlertPill, 0, 0);
+  lv_obj_clear_flag(pAlertPill, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* pAlertLbl = lv_label_create(pAlertPill);
+  lv_label_set_text(pAlertLbl, LV_SYMBOL_WARNING "  OUT OF SERVICE");
+  lv_obj_set_style_text_font(pAlertLbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(pAlertLbl, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_center(pAlertLbl);
+
+  // Digital Telemetry Screen showing "HOLD" & Reconnection Radar
+  lv_obj_t* pScreen = lv_obj_create(pauseConsole_);
+  lv_obj_set_size(pScreen, 216, 114);
+  lv_obj_align(pScreen, LV_ALIGN_TOP_MID, 0, 54);
+  lv_obj_set_style_radius(pScreen, 10, 0);
+  lv_obj_set_style_bg_color(pScreen, lv_color_hex(0x09060C), 0);
+  lv_obj_set_style_border_width(pScreen, 2, 0);
+  lv_obj_set_style_border_color(pScreen, lv_color_hex(0x4C1D24), 0);
+  lv_obj_set_style_pad_all(pScreen, 0, 0);
+  lv_obj_clear_flag(pScreen, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* pScreenHdr = lv_label_create(pScreen);
+  lv_label_set_text(pScreenHdr, "SYSTEM STATUS");
+  lv_obj_set_style_text_font(pScreenHdr, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(pScreenHdr, lv_color_hex(0x94A3B8), 0);
+  lv_obj_align(pScreenHdr, LV_ALIGN_TOP_MID, 0, 6);
+
+  lv_obj_t* pHoldDigits = lv_label_create(pScreen);
+  lv_label_set_text(pHoldDigits, "HOLD");
+  lv_obj_set_style_text_font(pHoldDigits, &lv_font_montserrat_36, 0);
+  lv_obj_set_style_text_color(pHoldDigits, lv_color_hex(0xF59E0B), 0);
+  lv_obj_align(pHoldDigits, LV_ALIGN_CENTER, 0, -2);
+
+  // 4 Animated Signal Search / Heartbeat Dots at bottom of Digital Screen
+  for (uint8_t d = 0; d < 4; ++d) {
+    pauseRadarDots_[d] = lv_obj_create(pScreen);
+    lv_obj_set_size(pauseRadarDots_[d], 28, 7);
+    lv_obj_set_pos(pauseRadarDots_[d], 36 + d * 38, 94);
+    lv_obj_set_style_radius(pauseRadarDots_[d], 3, 0);
+    lv_obj_set_style_bg_color(pauseRadarDots_[d], lv_color_hex(0xF59E0B), 0);
+    lv_obj_set_style_bg_opa(pauseRadarDots_[d], LV_OPA_30, 0);
+    lv_obj_set_style_border_width(pauseRadarDots_[d], 0, 0);
+    lv_obj_clear_flag(pauseRadarDots_[d], LV_OBJ_FLAG_SCROLLABLE);
+  }
+
+  // Lao Main Status Text ("ຢຸດໃຫ້ບໍລິການຊົ່ວຄາວ")
   pauseText_.parent(pause_);
-  pauseText_.font(&notosanslao_shaped_20); // Reduced font size to 20px
-  pauseText_.textColor(0x1C2B36); // Dark color
-  pauseText_.size(460, 48);
-  pauseText_.align(Align::BottomCenter, 0, -9); // Moved down by 15px (from -24 to -9) to show full vowels/tone marks
+  lv_obj_set_parent(pauseText_.native(), pauseConsole_);
+  pauseText_.font(&notosanslao_shaped_20);
+  pauseText_.textColor(0xFFFFFF);
+  pauseText_.size(220, 34);
+  pauseText_.align(Align::BottomCenter, 0, -72);
   lv_obj_set_style_text_align(pauseText_.native(), LV_TEXT_ALIGN_CENTER, 0);
+
+  // Lao Secondary Helpful Message ("ກະລຸນາລໍຖ້າສັກຄູ່...")
+  lv_obj_t* pWaitLao = lv_label_create(pauseConsole_);
+  lv_label_set_text(pWaitLao, shapeLaoText("ກະລຸນາລໍຖ້າສັກຄູ່...").c_str());
+  lv_obj_set_style_text_font(pWaitLao, &notosanslao_shaped_20, 0);
+  lv_obj_set_style_text_color(pWaitLao, lv_color_hex(0xFBBF24), 0);
+  lv_obj_align(pWaitLao, LV_ALIGN_BOTTOM_MID, 0, -38);
+
+  lv_obj_t* pEngSub = lv_label_create(pauseConsole_);
+  lv_label_set_text(pEngSub, "TEMPORARILY CLOSED");
+  lv_obj_set_style_text_font(pEngSub, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(pEngSub, lv_color_hex(0xF87171), 0);
+  lv_obj_align(pEngSub, LV_ALIGN_BOTTOM_MID, 0, -10);
 }
 
 void WasherView::buildPinPage() {
@@ -2430,11 +2689,44 @@ void WasherView::animateStatusPages(uint32_t now) {
       lv_obj_set_pos(successSparks_[i], sparkX[i], sparkY);
     }
   } else if (currentPage_ == Page::Pause) {
-    lv_arc_set_rotation(pauseDrum_, static_cast<uint16_t>((now / 12U) % 360U));
+    // 1. Dual counter-rotating Warning (Crimson) & Caution (Amber) rings inside porthole
+    if (pauseDrum_) {
+      lv_arc_set_rotation(pauseDrum_, static_cast<uint16_t>((now / 8U) % 360U));
+      lv_arc_set_angles(pauseDrum_, 0, static_cast<uint16_t>(160 + wave * 4));
+    }
+    if (pauseInnerRing_) {
+      lv_arc_set_rotation(pauseInnerRing_, static_cast<uint16_t>(360U - ((now / 7U) % 360U)));
+    }
+    // 2. Expanding crimson ripple halo behind the warning badge
     if (pauseHalo_) {
-      const int hSz = 82 + wave;
+      const uint32_t rPhase = now % 1100U;
+      const int hSz = 70 + static_cast<int>((rPhase * 52U) / 1100U);
+      const lv_opa_t opa = static_cast<lv_opa_t>(180U - (rPhase * 155U) / 1100U);
       lv_obj_set_size(pauseHalo_, hSz, hSz);
       lv_obj_align(pauseHalo_, LV_ALIGN_CENTER, 0, 0);
+      lv_obj_set_style_border_opa(pauseHalo_, opa, 0);
+      lv_obj_set_style_bg_opa(pauseHalo_, opa / 2, 0);
+    }
+    // 3. Breathing central warning shield badge
+    if (pauseCircle_) {
+      const int cSz = 64 + (wave / 2);
+      lv_obj_set_size(pauseCircle_, cSz, cSz);
+      lv_obj_align(pauseCircle_, LV_ALIGN_CENTER, 0, 0);
+    }
+    // 4. Flashing status LED on top industrial panel + pulsing console border
+    if (pauseStatusLed_) {
+      lv_obj_set_style_bg_opa(pauseStatusLed_, static_cast<lv_opa_t>(80 + wave * 10), 0);
+    }
+    if (pauseConsole_) {
+      lv_obj_set_style_border_opa(pauseConsole_, static_cast<lv_opa_t>(140 + wave * 7), 0);
+    }
+    // 5. 4 Sweeping Radar / Signal Search bars on the digital screen
+    const uint8_t activeBar = static_cast<uint8_t>((now / 260U) % 4U);
+    for (uint8_t d = 0; d < 4; ++d) {
+      if (!pauseRadarDots_[d]) continue;
+      const bool isLit = (d == activeBar);
+      lv_obj_set_style_bg_color(pauseRadarDots_[d], lv_color_hex(isLit ? 0xEF4444 : 0xF59E0B), 0);
+      lv_obj_set_style_bg_opa(pauseRadarDots_[d], isLit ? LV_OPA_COVER : LV_OPA_30, 0);
     }
   } else if (currentPage_ == Page::QrCode && !qrCodeLoaded_) {
     uint32_t elapsed = now - qrAnimationStartedAt_;

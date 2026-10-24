@@ -201,11 +201,16 @@ class WasherView {
   lv_obj_t* successHalo_ = nullptr;
   lv_obj_t* successSparks_[4] = {};
   washerui::Rect pause_;
-  washerui::Label pauseIcon_{LV_SYMBOL_PAUSE};
+  washerui::Label pauseIcon_{LV_SYMBOL_WARNING};
   washerui::Label pauseText_{"ຢຸດໃຫ້ບໍລິການຊົ່ວຄາວ"};
   lv_obj_t* pauseMachine_ = nullptr;
   lv_obj_t* pauseDrum_ = nullptr;
+  lv_obj_t* pauseInnerRing_ = nullptr;
   lv_obj_t* pauseHalo_ = nullptr;
+  lv_obj_t* pauseCircle_ = nullptr;
+  lv_obj_t* pauseStatusLed_ = nullptr;
+  lv_obj_t* pauseRadarDots_[4] = {};
+  lv_obj_t* pauseConsole_ = nullptr;
 
   washerui::Rect pinPage_;
   washerui::Button pinBack_{LV_SYMBOL_LEFT};
