@@ -60,6 +60,7 @@ class WasherController : public WasherViewListener {
   uint8_t activeOption_ = 0;
   uint32_t remainingSeconds_ = 0;
   uint32_t pageTimeoutAt_ = 0;
+  uint32_t runningPreviewUntil_ = 0;
   uint32_t paymentUntil_ = 0;
   uint32_t paymentSuccessUntil_ = 0;
   uint32_t successUntil_ = 0;

@@ -30,6 +30,7 @@ class WasherView {
   void setPrice(uint8_t option, uint32_t price);
   void setQrCode(const String& payload);
   void setQrOption(uint8_t option);
+  void setQrTimeoutSeconds(uint32_t seconds);
   void setCountdown(uint32_t seconds, uint8_t option);
   void setConnection(bool wifiConnected, bool mqttConnected, int rssi = -100);
   void setWifiStatus(const String& status);
@@ -104,6 +105,9 @@ class WasherView {
   washerui::Rect home_;
   washerui::Image homeImage_{&img_1};
   washerui::Button settingsButton_{LV_SYMBOL_SETTINGS};
+  lv_obj_t* homeClockPill_ = nullptr;
+  lv_obj_t* homeClockLabel_ = nullptr;
+  uint32_t nextClockUpdateAt_ = 0;
   lv_obj_t* wifiCont_ = nullptr;
   lv_obj_t* wifiDot_ = nullptr;
   lv_obj_t* wifiArcs_[3] = {nullptr};
@@ -147,6 +151,10 @@ class WasherView {
   lv_obj_t* qrScanLaser_ = nullptr;
   lv_obj_t* qrLoadingBubbles_[4] = {};
   washerui::Label qrLoadingLabel_{"ກຳລັງໂຫຼດ"};
+  lv_obj_t* qrTimeoutCard_ = nullptr;
+  lv_obj_t* qrTimeoutArc_ = nullptr;
+  lv_obj_t* qrTimeoutValLabel_ = nullptr;
+  uint32_t qrTimeoutSec_ = 20;
   bool qrCodeLoaded_ = false;
   bool qrCodeReceived_ = false;
   String qrPendingPayload_ = "";
@@ -174,7 +182,16 @@ class WasherView {
   washerui::Label countdownText_;
   lv_obj_t* runningMachine_ = nullptr;
   lv_obj_t* runningDrum_ = nullptr;
-  lv_obj_t* runningBubbles_[3] = {};
+  lv_obj_t* runningInnerRing_ = nullptr;
+  lv_obj_t* runningWaterWave1_ = nullptr;
+  lv_obj_t* runningWaterWave2_ = nullptr;
+  lv_obj_t* runningPaddles_[3] = {};
+  lv_obj_t* runningBubbles_[5] = {};
+  lv_obj_t* runningStatusLed_ = nullptr;
+  lv_obj_t* runningTempPill_ = nullptr;
+  lv_obj_t* runningTempLabel_ = nullptr;
+  lv_obj_t* runningProgressBar_ = nullptr;
+  uint8_t runningActiveOption_ = 1;
   washerui::Rect success_;
   washerui::Label successIcon_{LV_SYMBOL_OK};
   washerui::Label successText_{"ຊັກສຳເລັດແລ້ວ"};

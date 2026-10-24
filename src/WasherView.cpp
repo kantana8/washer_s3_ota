@@ -1,8 +1,10 @@
 #include "WasherView.h"
+#include "AppConfig.h"
 
 #include <WiFi.h>
 #include <esp_heap_caps.h>
 #include <esp_task_wdt.h>
+#include <time.h>
 
 using namespace washerui;
 
@@ -496,6 +498,26 @@ void WasherView::buildPages() {
   homeImage_.parent(home_);
   homeImage_.align(Align::Center, 0, 5);
   homeImage_.clickable(true).onClicked(optionClicked, nullptr);
+
+  // Top-center live current time pill on Home page
+  homeClockPill_ = lv_obj_create(home_.native());
+  lv_obj_set_size(homeClockPill_, 86, 22);
+  lv_obj_align(homeClockPill_, LV_ALIGN_TOP_MID, 0, 2);
+  lv_obj_set_style_radius(homeClockPill_, 11, 0);
+  lv_obj_set_style_bg_color(homeClockPill_, lv_color_hex(0x0B2239), 0);
+  lv_obj_set_style_bg_opa(homeClockPill_, LV_OPA_50, 0);
+  lv_obj_set_style_border_width(homeClockPill_, 1, 0);
+  lv_obj_set_style_border_color(homeClockPill_, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_border_opa(homeClockPill_, LV_OPA_50, 0);
+  lv_obj_set_style_pad_all(homeClockPill_, 0, 0);
+  lv_obj_clear_flag(homeClockPill_, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_clear_flag(homeClockPill_, LV_OBJ_FLAG_CLICKABLE);
+
+  homeClockLabel_ = lv_label_create(homeClockPill_);
+  lv_label_set_text(homeClockLabel_, "--:--");
+  lv_obj_set_style_text_font(homeClockLabel_, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(homeClockLabel_, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_center(homeClockLabel_);
 
   // Custom vector WiFi icon container (extreme top right corner, balanced & unclipped)
   lv_obj_t* topLayer = lv_layer_top();
@@ -1048,6 +1070,49 @@ void WasherView::buildPages() {
   qrLoadingLabel_.align(Align::BottomCenter, 0, -10);
   lv_obj_set_style_text_align(qrLoadingLabel_.native(), LV_TEXT_ALIGN_CENTER, 0);
 
+  // Right-side QR Page Countdown Timer Card (centered in the right space x=356..468)
+  qrTimeoutCard_ = lv_obj_create(qr_.native());
+  lv_obj_set_size(qrTimeoutCard_, 112, 134);
+  lv_obj_set_pos(qrTimeoutCard_, 356, 103);
+  lv_obj_set_style_radius(qrTimeoutCard_, 14, 0);
+  lv_obj_set_style_bg_color(qrTimeoutCard_, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_bg_opa(qrTimeoutCard_, LV_OPA_COVER, 0);
+  lv_obj_set_style_border_width(qrTimeoutCard_, 2, 0);
+  lv_obj_set_style_border_color(qrTimeoutCard_, lv_color_hex(0x1A8CFF), 0);
+  lv_obj_set_style_shadow_width(qrTimeoutCard_, 14, 0);
+  lv_obj_set_style_shadow_opa(qrTimeoutCard_, LV_OPA_20, 0);
+  lv_obj_set_style_shadow_color(qrTimeoutCard_, lv_color_hex(0x173E59), 0);
+  lv_obj_set_style_shadow_ofs_y(qrTimeoutCard_, 4, 0);
+  lv_obj_set_style_pad_all(qrTimeoutCard_, 0, 0);
+  lv_obj_clear_flag(qrTimeoutCard_, LV_OBJ_FLAG_SCROLLABLE);
+
+  qrTimeoutArc_ = lv_arc_create(qrTimeoutCard_);
+  lv_obj_set_size(qrTimeoutArc_, 76, 76);
+  lv_obj_align(qrTimeoutArc_, LV_ALIGN_TOP_MID, 0, 12);
+  lv_arc_set_rotation(qrTimeoutArc_, 270);
+  lv_arc_set_bg_angles(qrTimeoutArc_, 0, 360);
+  lv_arc_set_range(qrTimeoutArc_, 0, config::PageTimeoutMs / 1000U);
+  lv_arc_set_value(qrTimeoutArc_, config::PageTimeoutMs / 1000U);
+  lv_obj_set_style_arc_width(qrTimeoutArc_, 6, LV_PART_MAIN);
+  lv_obj_set_style_arc_color(qrTimeoutArc_, lv_color_hex(0xE2E8F0), LV_PART_MAIN);
+  lv_obj_set_style_arc_width(qrTimeoutArc_, 6, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_color(qrTimeoutArc_, lv_color_hex(0x1A8CFF), LV_PART_INDICATOR);
+  lv_obj_set_style_arc_rounded(qrTimeoutArc_, true, LV_PART_INDICATOR);
+  lv_obj_remove_style(qrTimeoutArc_, nullptr, LV_PART_KNOB);
+  lv_obj_clear_flag(qrTimeoutArc_, LV_OBJ_FLAG_CLICKABLE);
+
+  qrTimeoutValLabel_ = lv_label_create(qrTimeoutArc_);
+  lv_label_set_text_fmt(qrTimeoutValLabel_, "%us", static_cast<unsigned>(config::PageTimeoutMs / 1000U));
+  lv_obj_set_style_text_font(qrTimeoutValLabel_, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(qrTimeoutValLabel_, lv_color_hex(0x0B2239), 0);
+  lv_obj_center(qrTimeoutValLabel_);
+
+  lv_obj_t* qrTimeTitle = lv_label_create(qrTimeoutCard_);
+  lv_label_set_text(qrTimeTitle, shapeLaoText("ເວລາສະແກນ").c_str());
+  lv_obj_set_style_text_font(qrTimeTitle, &notosanslao_shaped_20, 0);
+  lv_obj_set_style_text_color(qrTimeTitle, lv_color_hex(0x2B4C6B), 0);
+  lv_obj_align(qrTimeTitle, LV_ALIGN_BOTTOM_MID, 0, -6);
+
   // Bottom info bar (x=0, y=280, width=480, height=40, touching bottom edge)
   qrBottomBar_ = lv_obj_create(qr_.native());
   lv_obj_set_size(qrBottomBar_, 480, 40);
@@ -1239,39 +1304,313 @@ void WasherView::buildPages() {
   lv_obj_set_style_text_color(succSub, lv_color_hex(0x059669), 0);
   lv_obj_align(succSub, LV_ALIGN_BOTTOM_MID, 0, -10);
 
-  configurePage(running_, 0xF3FAFD);
-  runningMachine_ = createWasherMachine(running_.native(), 155, 21, 170, 202, 0xFFFFFF, &runningDrum_); // Moved down by 15px (y=21)
-  const lv_point_t bubblePositions[3] = {{54, 112}, {91, 101}, {73, 143}};
-  for (uint8_t i = 0; i < 3; ++i) {
-    runningBubbles_[i] = createDot(runningMachine_, 12 + i * 3, 0x65D4EF);
-    lv_obj_set_pos(runningBubbles_[i], bubblePositions[i].x, bubblePositions[i].y);
+  // ==================== Industrial Front-Load Washer Dashboard (Page::Running) ====================
+  configurePage(running_, 0x0B1522);
+  lv_obj_set_style_bg_grad_color(running_.native(), lv_color_hex(0x162940), LV_PART_MAIN);
+  lv_obj_set_style_bg_grad_dir(running_.native(), LV_GRAD_DIR_VER, LV_PART_MAIN);
+
+  // LEFT SIDE: Realistic Industrial Stainless-Steel Front-Load Washer (206x292 at x=12, y=14)
+  runningMachine_ = lv_obj_create(running_.native());
+  lv_obj_set_size(runningMachine_, 206, 292);
+  lv_obj_set_pos(runningMachine_, 12, 14);
+  lv_obj_set_style_radius(runningMachine_, 14, 0);
+  lv_obj_set_style_bg_color(runningMachine_, lv_color_hex(0xDCE4EC), 0);
+  lv_obj_set_style_bg_grad_color(runningMachine_, lv_color_hex(0x9BA9B8), 0);
+  lv_obj_set_style_bg_grad_dir(runningMachine_, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_border_width(runningMachine_, 3, 0);
+  lv_obj_set_style_border_color(runningMachine_, lv_color_hex(0xF8FAFC), 0);
+  lv_obj_set_style_shadow_width(runningMachine_, 24, 0);
+  lv_obj_set_style_shadow_opa(runningMachine_, LV_OPA_60, 0);
+  lv_obj_set_style_shadow_color(runningMachine_, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_shadow_ofs_y(runningMachine_, 6, 0);
+  lv_obj_set_style_pad_all(runningMachine_, 0, 0);
+  lv_obj_clear_flag(runningMachine_, LV_OBJ_FLAG_SCROLLABLE);
+
+  // Industrial Top Control Header Panel
+  lv_obj_t* indPanel = lv_obj_create(runningMachine_);
+  lv_obj_set_size(indPanel, 190, 44);
+  lv_obj_set_pos(indPanel, 5, 6);
+  lv_obj_set_style_radius(indPanel, 8, 0);
+  lv_obj_set_style_bg_color(indPanel, lv_color_hex(0x111C2A), 0);
+  lv_obj_set_style_border_width(indPanel, 2, 0);
+  lv_obj_set_style_border_color(indPanel, lv_color_hex(0x334155), 0);
+  lv_obj_set_style_pad_all(indPanel, 0, 0);
+  lv_obj_clear_flag(indPanel, LV_OBJ_FLAG_SCROLLABLE);
+
+  // Soap Dispenser Drawer Slot (left of panel)
+  lv_obj_t* drawerSlot = lv_obj_create(indPanel);
+  lv_obj_set_size(drawerSlot, 46, 26);
+  lv_obj_set_pos(drawerSlot, 6, 7);
+  lv_obj_set_style_radius(drawerSlot, 4, 0);
+  lv_obj_set_style_bg_color(drawerSlot, lv_color_hex(0x1E293B), 0);
+  lv_obj_set_style_border_width(drawerSlot, 1, 0);
+  lv_obj_set_style_border_color(drawerSlot, lv_color_hex(0x475569), 0);
+  lv_obj_set_style_pad_all(drawerSlot, 0, 0);
+  lv_obj_clear_flag(drawerSlot, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* drawerHandle = lv_obj_create(drawerSlot);
+  lv_obj_set_size(drawerHandle, 28, 6);
+  lv_obj_align(drawerHandle, LV_ALIGN_CENTER, 0, 2);
+  lv_obj_set_style_radius(drawerHandle, 2, 0);
+  lv_obj_set_style_bg_color(drawerHandle, lv_color_hex(0x94A3B8), 0);
+  lv_obj_set_style_border_width(drawerHandle, 0, 0);
+
+  // Brand Plate & Mini Cycle Screen (center of panel)
+  lv_obj_t* brandLbl = lv_label_create(indPanel);
+  lv_label_set_text(brandLbl, "HEAVY DUTY");
+  lv_obj_set_style_text_font(brandLbl, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(brandLbl, lv_color_hex(0x38BDF8), 0);
+  lv_obj_set_pos(brandLbl, 58, 12);
+
+  // Pulsing Status LED + Metallic Rotary Dial (right of panel)
+  runningStatusLed_ = lv_obj_create(indPanel);
+  lv_obj_set_size(runningStatusLed_, 10, 10);
+  lv_obj_set_pos(runningStatusLed_, 152, 15);
+  lv_obj_set_style_radius(runningStatusLed_, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(runningStatusLed_, lv_color_hex(0x10B981), 0);
+  lv_obj_set_style_shadow_width(runningStatusLed_, 8, 0);
+  lv_obj_set_style_shadow_color(runningStatusLed_, lv_color_hex(0x10B981), 0);
+  lv_obj_set_style_border_width(runningStatusLed_, 0, 0);
+
+  lv_obj_t* rotaryKnob = lv_obj_create(indPanel);
+  lv_obj_set_size(rotaryKnob, 20, 20);
+  lv_obj_set_pos(rotaryKnob, 165, 10);
+  lv_obj_set_style_radius(rotaryKnob, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(rotaryKnob, lv_color_hex(0xCBD5E1), 0);
+  lv_obj_set_style_border_width(rotaryKnob, 2, 0);
+  lv_obj_set_style_border_color(rotaryKnob, lv_color_hex(0x64748B), 0);
+
+  // Heavy-Duty Chrome Outer Door Bezel (164x164 centered at y=58)
+  lv_obj_t* outerDoor = lv_obj_create(runningMachine_);
+  lv_obj_set_size(outerDoor, 164, 164);
+  lv_obj_align(outerDoor, LV_ALIGN_TOP_MID, 0, 58);
+  lv_obj_set_style_radius(outerDoor, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(outerDoor, lv_color_hex(0x64748B), 0);
+  lv_obj_set_style_bg_grad_color(outerDoor, lv_color_hex(0xCBD5E1), 0);
+  lv_obj_set_style_bg_grad_dir(outerDoor, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_border_width(outerDoor, 6, 0);
+  lv_obj_set_style_border_color(outerDoor, lv_color_hex(0x334155), 0);
+  lv_obj_set_style_shadow_width(outerDoor, 16, 0);
+  lv_obj_set_style_shadow_opa(outerDoor, LV_OPA_50, 0);
+  lv_obj_set_style_shadow_color(outerDoor, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_pad_all(outerDoor, 0, 0);
+  lv_obj_clear_flag(outerDoor, LV_OBJ_FLAG_SCROLLABLE);
+
+  // Industrial Door Hinge (left) & Heavy Lock Latch Handle (right)
+  lv_obj_t* doorHinge = lv_obj_create(runningMachine_);
+  lv_obj_set_size(doorHinge, 12, 38);
+  lv_obj_set_pos(doorHinge, 12, 121);
+  lv_obj_set_style_radius(doorHinge, 4, 0);
+  lv_obj_set_style_bg_color(doorHinge, lv_color_hex(0x475569), 0);
+  lv_obj_set_style_border_width(doorHinge, 1, 0);
+  lv_obj_set_style_border_color(doorHinge, lv_color_hex(0x94A3B8), 0);
+
+  lv_obj_t* doorHandle = lv_obj_create(runningMachine_);
+  lv_obj_set_size(doorHandle, 14, 48);
+  lv_obj_set_pos(doorHandle, 174, 116);
+  lv_obj_set_style_radius(doorHandle, 5, 0);
+  lv_obj_set_style_bg_color(doorHandle, lv_color_hex(0x1E293B), 0);
+  lv_obj_set_style_border_width(doorHandle, 2, 0);
+  lv_obj_set_style_border_color(doorHandle, lv_color_hex(0x94A3B8), 0);
+
+  // Deep Glass Porthole Window (132x132 clipped circle inside outerDoor)
+  lv_obj_t* glassWindow = lv_obj_create(outerDoor);
+  lv_obj_set_size(glassWindow, 132, 132);
+  lv_obj_center(glassWindow);
+  lv_obj_set_style_radius(glassWindow, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(glassWindow, lv_color_hex(0x071324), 0);
+  lv_obj_set_style_bg_grad_color(glassWindow, lv_color_hex(0x0F294A), 0);
+  lv_obj_set_style_bg_grad_dir(glassWindow, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_border_width(glassWindow, 3, 0);
+  lv_obj_set_style_border_color(glassWindow, lv_color_hex(0x94A3B8), 0);
+  lv_obj_set_style_pad_all(glassWindow, 0, 0);
+  lv_obj_set_style_clip_corner(glassWindow, true, 0);
+  lv_obj_clear_flag(glassWindow, LV_OBJ_FLAG_SCROLLABLE);
+
+  // Sloshing Back Water Wave inside Drum
+  runningWaterWave2_ = lv_obj_create(glassWindow);
+  lv_obj_set_size(runningWaterWave2_, 156, 86);
+  lv_obj_set_pos(runningWaterWave2_, -12, 64);
+  lv_obj_set_style_radius(runningWaterWave2_, 36, 0);
+  lv_obj_set_style_bg_color(runningWaterWave2_, lv_color_hex(0x0284C7), 0);
+  lv_obj_set_style_bg_opa(runningWaterWave2_, LV_OPA_70, 0);
+  lv_obj_set_style_border_width(runningWaterWave2_, 0, 0);
+  lv_obj_clear_flag(runningWaterWave2_, LV_OBJ_FLAG_SCROLLABLE);
+
+  // 3 Tumbling Laundry/Lifter Paddles inside the Drum
+  const uint32_t paddleColors[3] = {0x38BDF8, 0xFBBF24, 0xF8FAFC};
+  for (uint8_t p = 0; p < 3; ++p) {
+    runningPaddles_[p] = lv_obj_create(glassWindow);
+    lv_obj_set_size(runningPaddles_[p], 24, 24);
+    lv_obj_set_style_radius(runningPaddles_[p], 8, 0);
+    lv_obj_set_style_bg_color(runningPaddles_[p], lv_color_hex(paddleColors[p]), 0);
+    lv_obj_set_style_bg_opa(runningPaddles_[p], LV_OPA_80, 0);
+    lv_obj_set_style_border_width(runningPaddles_[p], 2, 0);
+    lv_obj_set_style_border_color(runningPaddles_[p], lv_color_hex(0xFFFFFF), 0);
+    lv_obj_clear_flag(runningPaddles_[p], LV_OBJ_FLAG_SCROLLABLE);
   }
 
-  runningText_.parent(running_);
-  runningText_.font(&notosanslao_shaped_20); // Reduced Lao font to 20px
-  runningText_.textColor(0x087FB8);
-  runningText_.size(460, 52);
-  runningText_.align(Align::BottomCenter, 0, -20); // Perfectly centered at the bottom of the screen
-  lv_obj_set_style_text_align(runningText_.native(), LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_set_style_text_line_space(runningText_.native(), 2, 0);
+  // Sloshing Front Water Wave with White Foam Crest
+  runningWaterWave1_ = lv_obj_create(glassWindow);
+  lv_obj_set_size(runningWaterWave1_, 156, 82);
+  lv_obj_set_pos(runningWaterWave1_, -12, 72);
+  lv_obj_set_style_radius(runningWaterWave1_, 34, 0);
+  lv_obj_set_style_bg_color(runningWaterWave1_, lv_color_hex(0x0EA5E9), 0);
+  lv_obj_set_style_bg_grad_color(runningWaterWave1_, lv_color_hex(0x0369A1), 0);
+  lv_obj_set_style_bg_grad_dir(runningWaterWave1_, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_bg_opa(runningWaterWave1_, LV_OPA_80, 0);
+  lv_obj_set_style_border_width(runningWaterWave1_, 2, 0);
+  lv_obj_set_style_border_color(runningWaterWave1_, lv_color_hex(0xBAE6FD), 0);
+  lv_obj_clear_flag(runningWaterWave1_, LV_OBJ_FLAG_SCROLLABLE);
 
-  // Digital LED Screen for countdown (resembles real washing machine screen)
-  lv_obj_t* runningScreen = lv_obj_create(runningMachine_);
-  lv_obj_set_size(runningScreen, 72, 30);
-  lv_obj_set_pos(runningScreen, 49, 32); // Centered horizontally below the panel (170-72)/2 = 49
-  lv_obj_set_style_radius(runningScreen, 4, 0);
-  lv_obj_set_style_bg_color(runningScreen, lv_color_hex(0x1B242C), 0); // Glossy dark screen
-  lv_obj_set_style_bg_opa(runningScreen, LV_OPA_COVER, 0);
-  lv_obj_set_style_border_width(runningScreen, 1, 0);
-  lv_obj_set_style_border_color(runningScreen, lv_color_hex(0x2D3E4F), 0);
+  // Outer High-Speed Spinning Stainless Drum Ring
+  runningDrum_ = lv_arc_create(glassWindow);
+  lv_obj_set_size(runningDrum_, 122, 122);
+  lv_obj_center(runningDrum_);
+  lv_arc_set_bg_angles(runningDrum_, 0, 360);
+  lv_arc_set_angles(runningDrum_, 0, 220);
+  lv_obj_set_style_arc_width(runningDrum_, 7, LV_PART_MAIN);
+  lv_obj_set_style_arc_color(runningDrum_, lv_color_hex(0x1E293B), LV_PART_MAIN);
+  lv_obj_set_style_arc_opa(runningDrum_, LV_OPA_40, LV_PART_MAIN);
+  lv_obj_set_style_arc_width(runningDrum_, 7, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_color(runningDrum_, lv_color_hex(0x38BDF8), LV_PART_INDICATOR);
+  lv_obj_set_style_arc_rounded(runningDrum_, true, LV_PART_INDICATOR);
+  lv_obj_remove_style(runningDrum_, nullptr, LV_PART_KNOB);
+  lv_obj_clear_flag(runningDrum_, LV_OBJ_FLAG_CLICKABLE);
+
+  // Inner Counter-Rotating Vortex Ring
+  runningInnerRing_ = lv_arc_create(glassWindow);
+  lv_obj_set_size(runningInnerRing_, 92, 92);
+  lv_obj_center(runningInnerRing_);
+  lv_arc_set_bg_angles(runningInnerRing_, 0, 360);
+  lv_arc_set_angles(runningInnerRing_, 0, 130);
+  lv_obj_set_style_arc_width(runningInnerRing_, 4, LV_PART_MAIN);
+  lv_obj_set_style_arc_opa(runningInnerRing_, LV_OPA_TRANSP, LV_PART_MAIN);
+  lv_obj_set_style_arc_width(runningInnerRing_, 4, LV_PART_INDICATOR);
+  lv_obj_set_style_arc_color(runningInnerRing_, lv_color_hex(0xE0F2FE), LV_PART_INDICATOR);
+  lv_obj_set_style_arc_rounded(runningInnerRing_, true, LV_PART_INDICATOR);
+  lv_obj_remove_style(runningInnerRing_, nullptr, LV_PART_KNOB);
+  lv_obj_clear_flag(runningInnerRing_, LV_OBJ_FLAG_CLICKABLE);
+
+  // 5 Suds / Foam Bubbles inside the Porthole Window
+  for (uint8_t i = 0; i < 5; ++i) {
+    runningBubbles_[i] = createDot(glassWindow, 8 + (i % 3) * 3, 0xE0F2FE);
+    lv_obj_set_style_bg_opa(runningBubbles_[i], LV_OPA_80, 0);
+  }
+
+  // Bottom Industrial Kickplate Grille with 4 Louver Vents + Drain Filter Cap
+  lv_obj_t* kickPlate = lv_obj_create(runningMachine_);
+  lv_obj_set_size(kickPlate, 188, 44);
+  lv_obj_align(kickPlate, LV_ALIGN_BOTTOM_MID, 0, -8);
+  lv_obj_set_style_radius(kickPlate, 6, 0);
+  lv_obj_set_style_bg_color(kickPlate, lv_color_hex(0x64748B), 0);
+  lv_obj_set_style_border_width(kickPlate, 1, 0);
+  lv_obj_set_style_border_color(kickPlate, lv_color_hex(0x475569), 0);
+  lv_obj_set_style_pad_all(kickPlate, 0, 0);
+  lv_obj_clear_flag(kickPlate, LV_OBJ_FLAG_SCROLLABLE);
+
+  for (uint8_t v = 0; v < 3; ++v) {
+    lv_obj_t* vent = lv_obj_create(kickPlate);
+    lv_obj_set_size(vent, 120, 4);
+    lv_obj_set_pos(vent, 10, 9 + v * 10);
+    lv_obj_set_style_radius(vent, 2, 0);
+    lv_obj_set_style_bg_color(vent, lv_color_hex(0x1E293B), 0);
+    lv_obj_set_style_border_width(vent, 0, 0);
+  }
+
+  lv_obj_t* drainCap = lv_obj_create(kickPlate);
+  lv_obj_set_size(drainCap, 28, 28);
+  lv_obj_align(drainCap, LV_ALIGN_RIGHT_MID, -10, 0);
+  lv_obj_set_style_radius(drainCap, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(drainCap, lv_color_hex(0x334155), 0);
+  lv_obj_set_style_border_width(drainCap, 2, 0);
+  lv_obj_set_style_border_color(drainCap, lv_color_hex(0x94A3B8), 0);
+
+  // RIGHT SIDE: Industrial Digital Telemetry & Countdown Console Card (240x292 at x=228, y=14)
+  lv_obj_t* runConsole = lv_obj_create(running_.native());
+  lv_obj_set_size(runConsole, 240, 292);
+  lv_obj_set_pos(runConsole, 228, 14);
+  lv_obj_set_style_radius(runConsole, 14, 0);
+  lv_obj_set_style_bg_color(runConsole, lv_color_hex(0x111E2E), 0);
+  lv_obj_set_style_bg_grad_color(runConsole, lv_color_hex(0x0B1420), 0);
+  lv_obj_set_style_bg_grad_dir(runConsole, LV_GRAD_DIR_VER, 0);
+  lv_obj_set_style_border_width(runConsole, 2, 0);
+  lv_obj_set_style_border_color(runConsole, lv_color_hex(0x263B54), 0);
+  lv_obj_set_style_shadow_width(runConsole, 20, 0);
+  lv_obj_set_style_shadow_opa(runConsole, LV_OPA_50, 0);
+  lv_obj_set_style_shadow_color(runConsole, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_pad_all(runConsole, 0, 0);
+  lv_obj_clear_flag(runConsole, LV_OBJ_FLAG_SCROLLABLE);
+
+  // Active Temperature Mode Badge Pill at top of Console
+  runningTempPill_ = lv_obj_create(runConsole);
+  lv_obj_set_size(runningTempPill_, 216, 38);
+  lv_obj_align(runningTempPill_, LV_ALIGN_TOP_MID, 0, 10);
+  lv_obj_set_style_radius(runningTempPill_, 10, 0);
+  lv_obj_set_style_bg_color(runningTempPill_, lv_color_hex(0x0284C7), 0);
+  lv_obj_set_style_border_width(runningTempPill_, 1, 0);
+  lv_obj_set_style_border_color(runningTempPill_, lv_color_hex(0x7DD3FC), 0);
+  lv_obj_set_style_pad_all(runningTempPill_, 0, 0);
+  lv_obj_clear_flag(runningTempPill_, LV_OBJ_FLAG_SCROLLABLE);
+
+  runningTempLabel_ = lv_label_create(runningTempPill_);
+  lv_label_set_text(runningTempLabel_, shapeLaoText("ໂໝດຊັກ: ນ້ຳເຢັນ COLD").c_str());
+  lv_obj_set_style_text_font(runningTempLabel_, &notosanslao_shaped_20, 0);
+  lv_obj_set_style_text_color(runningTempLabel_, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_center(runningTempLabel_);
+
+  // Large Industrial Seven-Segment Style Digital Countdown Screen
+  lv_obj_t* runningScreen = lv_obj_create(runConsole);
+  lv_obj_set_size(runningScreen, 216, 102);
+  lv_obj_align(runningScreen, LV_ALIGN_TOP_MID, 0, 56);
+  lv_obj_set_style_radius(runningScreen, 10, 0);
+  lv_obj_set_style_bg_color(runningScreen, lv_color_hex(0x060D16), 0);
+  lv_obj_set_style_border_width(runningScreen, 2, 0);
+  lv_obj_set_style_border_color(runningScreen, lv_color_hex(0x1E3A5F), 0);
   lv_obj_set_style_pad_all(runningScreen, 0, 0);
   lv_obj_clear_flag(runningScreen, LV_OBJ_FLAG_SCROLLABLE);
 
+  lv_obj_t* remHeader = lv_label_create(runningScreen);
+  lv_label_set_text(remHeader, "TIME REMAINING (MM:SS)");
+  lv_obj_set_style_text_font(remHeader, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(remHeader, lv_color_hex(0x64748B), 0);
+  lv_obj_align(remHeader, LV_ALIGN_TOP_MID, 0, 6);
+
   countdownText_.parent(running_);
   lv_obj_set_parent(countdownText_.native(), runningScreen);
-  countdownText_.font(&lv_font_montserrat_20);
-  countdownText_.textColor(0x00E5FF); // Glowing cyan countdown color
-  countdownText_.align(Align::Center, 0, 0); // Centered inside the LED screen
+  countdownText_.font(&lv_font_montserrat_48);
+  countdownText_.textColor(0x00F0FF);
+  countdownText_.text("00:00");
+  countdownText_.align(Align::BottomCenter, 0, -6);
+
+  // Animated Wash Progress Bar
+  runningProgressBar_ = lv_bar_create(runConsole);
+  lv_obj_set_size(runningProgressBar_, 216, 12);
+  lv_obj_align(runningProgressBar_, LV_ALIGN_TOP_MID, 0, 168);
+  lv_bar_set_range(runningProgressBar_, 0, 100);
+  lv_bar_set_value(runningProgressBar_, 50, LV_ANIM_OFF);
+  lv_obj_set_style_radius(runningProgressBar_, 6, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(runningProgressBar_, lv_color_hex(0x1E293B), LV_PART_MAIN);
+  lv_obj_set_style_radius(runningProgressBar_, 6, LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(runningProgressBar_, lv_color_hex(0x06B6D4), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_grad_color(runningProgressBar_, lv_color_hex(0x10B981), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_grad_dir(runningProgressBar_, LV_GRAD_DIR_HOR, LV_PART_INDICATOR);
+
+  // Lao & English Status Text inside Console
+  runningText_.parent(running_);
+  lv_obj_set_parent(runningText_.native(), runConsole);
+  runningText_.font(&notosanslao_shaped_20);
+  runningText_.textColor(0xE2E8F0);
+  runningText_.size(220, 56);
+  runningText_.align(Align::BottomCenter, 0, -32);
+  lv_obj_set_style_text_align(runningText_.native(), LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_line_space(runningText_.native(), 2, 0);
+
+  lv_obj_t* indSub = lv_label_create(runConsole);
+  lv_label_set_text(indSub, "INDUSTRIAL WASH IN PROGRESS");
+  lv_obj_set_style_text_font(indSub, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(indSub, lv_color_hex(0x10B981), 0);
+  lv_obj_align(indSub, LV_ALIGN_BOTTOM_MID, 0, -10);
 
   configurePage(success_, 0xF3FAFD); // Same light background as running page
   successMachine_ = createWasherMachine(success_.native(), 155, 30, 170, 202, 0xFFFFFF, &successDrum_);
@@ -1859,8 +2198,8 @@ void WasherView::show(Page page) {
     }
   }
 
-  // Hide top-right WiFi & Internet globe icons specifically on Settings and WifiScan pages
-  const bool hideTopIcons = (page == Page::Settings || page == Page::WifiScan);
+  // Show top-right WiFi & Internet globe icons ONLY on Page::Home
+  const bool hideTopIcons = (page != Page::Home);
   if (wifiCont_) {
     if (hideTopIcons) lv_obj_add_flag(wifiCont_, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_clear_flag(wifiCont_, LV_OBJ_FLAG_HIDDEN);
@@ -1912,10 +2251,25 @@ void WasherView::show(Page page) {
 
 void WasherView::update() {
   const uint32_t now = millis();
-  if (currentPage_ == Page::Home && now >= imageSwapAt_) {
-    imageSwapAt_ = now + 4000;
-    alternateHomeImage_ = !alternateHomeImage_;
-    homeImage_.source(alternateHomeImage_ ? &img_2 : &img_1);
+  if (currentPage_ == Page::Home) {
+    if (now >= imageSwapAt_) {
+      imageSwapAt_ = now + 4000;
+      alternateHomeImage_ = !alternateHomeImage_;
+      homeImage_.source(alternateHomeImage_ ? &img_2 : &img_1);
+    }
+    if (now >= nextClockUpdateAt_ && homeClockLabel_) {
+      nextClockUpdateAt_ = now + 1000;
+      struct tm timeinfo{};
+      time_t rawNow = time(nullptr);
+      localtime_r(&rawNow, &timeinfo);
+      if (timeinfo.tm_year >= 120) {
+        char tbuf[16];
+        snprintf(tbuf, sizeof(tbuf), "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+        lv_label_set_text(homeClockLabel_, tbuf);
+      } else {
+        lv_label_set_text(homeClockLabel_, "--:--");
+      }
+    }
   }
   if (settingsButtonHideAt_ && now >= settingsButtonHideAt_) {
     settingsButtonHideAt_ = 0;
@@ -1945,10 +2299,47 @@ void WasherView::animateStatusPages(uint32_t now) {
   const int wave = (pulse16 <= 16) ? pulse16 : (32 - pulse16); // 0..16..0 smooth triangle wave
 
   if (currentPage_ == Page::Running) {
-    lv_arc_set_rotation(runningDrum_, rotation);
-    for (uint8_t i = 0; i < 3; ++i) {
-      const int bubbleY = 145 - ((now / (10U + i)) % 55U);
-      lv_obj_set_pos(runningBubbles_[i], 55 + i * 20, bubbleY);
+    // 1. High-speed counter-rotating industrial drum rings
+    if (runningDrum_) {
+      lv_arc_set_rotation(runningDrum_, static_cast<uint16_t>((now / 4U) % 360U));
+      lv_arc_set_angles(runningDrum_, 0, static_cast<uint16_t>(160 + wave * 5));
+    }
+    if (runningInnerRing_) {
+      lv_arc_set_rotation(runningInnerRing_, static_cast<uint16_t>(360U - ((now / 5U) % 360U)));
+    }
+    // 2. Subtle industrial machine vibration (1px oscillation)
+    if (runningMachine_) {
+      const int vibX = ((now / 35U) % 2U == 0) ? 0 : 1;
+      lv_obj_set_pos(runningMachine_, 12 + vibX, 14);
+    }
+    // 3. Sloshing dual water waves inside glass window
+    const int slosh = (wave - 8); // -8 .. +8
+    if (runningWaterWave1_) {
+      lv_obj_set_pos(runningWaterWave1_, -12 + slosh, 70 + (slosh / 2));
+    }
+    if (runningWaterWave2_) {
+      lv_obj_set_pos(runningWaterWave2_, -12 - slosh, 64 - (slosh / 2));
+    }
+    // 4. 3 Tumbling Laundry items / Lifter Paddles revolving around drum center (66, 66)
+    static const int8_t cos12[12] = {100, 86, 50, 0, -50, -86, -100, -86, -50, 0, 50, 86};
+    static const int8_t sin12[12] = {0, 50, 86, 100, 86, 50, 0, -50, -86, -100, -86, -50};
+    for (uint8_t p = 0; p < 3; ++p) {
+      if (!runningPaddles_[p]) continue;
+      const uint8_t step = static_cast<uint8_t>(((now / 65U) + p * 4U) % 12U);
+      const int px = 66 + (cos12[step] * 32) / 100 - 12;
+      const int py = 66 + (sin12[step] * 32) / 100 - 12;
+      lv_obj_set_pos(runningPaddles_[p], px, py);
+    }
+    // 5. 5 Rising Suds / Foam Bubbles inside glass porthole
+    const int bX[5] = {24, 42, 62, 82, 98};
+    for (uint8_t i = 0; i < 5; ++i) {
+      if (!runningBubbles_[i]) continue;
+      const int bubbleY = 110 - static_cast<int>(((now / (9U + i * 2U)) + i * 19U) % 82U);
+      lv_obj_set_pos(runningBubbles_[i], bX[i], bubbleY);
+    }
+    // 6. Pulsing Industrial Status LED
+    if (runningStatusLed_) {
+      lv_obj_set_style_bg_opa(runningStatusLed_, static_cast<lv_opa_t>(135 + wave * 7), 0);
     }
   } else if (currentPage_ == Page::Payment) {
     lv_arc_set_rotation(paymentDrum_, rotation);
@@ -2164,6 +2555,12 @@ void WasherView::setQrOption(uint8_t option) {
       lv_obj_set_style_bg_color(qrLoadingBubbles_[b], lv_color_hex(mainColors[idx]), 0);
     }
   }
+  if (qrTimeoutCard_) {
+    lv_obj_set_style_border_color(qrTimeoutCard_, lv_color_hex(mainColors[idx]), 0);
+  }
+  if (qrTimeoutArc_) {
+    lv_obj_set_style_arc_color(qrTimeoutArc_, lv_color_hex(mainColors[idx]), LV_PART_INDICATOR);
+  }
 
   updateQrInfo(option);
 
@@ -2216,12 +2613,63 @@ void WasherView::revealQrCode() {
   }
 }
 
+void WasherView::setQrTimeoutSeconds(uint32_t seconds) {
+  if (qrTimeoutSec_ == seconds) return;
+  qrTimeoutSec_ = seconds;
+  if (qrTimeoutArc_) {
+    lv_arc_set_value(qrTimeoutArc_, seconds);
+  }
+  if (qrTimeoutValLabel_) {
+    lv_label_set_text_fmt(qrTimeoutValLabel_, "%lus", static_cast<unsigned long>(seconds));
+    lv_obj_set_style_text_color(qrTimeoutValLabel_, lv_color_hex(seconds <= 5 ? 0xE85D55 : 0x0B2239), 0);
+  }
+}
+
 void WasherView::setCountdown(uint32_t seconds, uint8_t option) {
-  (void)option;
   char value[16];
   snprintf(value, sizeof(value), "%02lu:%02lu",
            static_cast<unsigned long>(seconds / 60), static_cast<unsigned long>(seconds % 60));
   countdownText_.text(value);
+
+  if (option >= 1 && option <= 3) {
+    if (runningActiveOption_ != option) {
+      runningActiveOption_ = option;
+      const char* modeTexts[3] = {
+        "ໂໝດຊັກ: ນ້ຳເຢັນ COLD",
+        "ໂໝດຊັກ: ນ້ຳອຸ່ນ WARM",
+        "ໂໝດຊັກ: ນ້ຳຮ້ອນ HOT"
+      };
+      const uint32_t pillColors[3] = {0x0284C7, 0xD97706, 0xDC2626};
+      const uint32_t borderColors[3] = {0x7DD3FC, 0xFDE68A, 0xFCA5A5};
+      const uint32_t wave1Colors[3] = {0x0EA5E9, 0xF59E0B, 0xF97316};
+      const uint32_t wave2Colors[3] = {0x0284C7, 0xD97706, 0xEA580C};
+      const uint8_t idx = option - 1;
+      if (runningTempPill_) {
+        lv_obj_set_style_bg_color(runningTempPill_, lv_color_hex(pillColors[idx]), 0);
+        lv_obj_set_style_border_color(runningTempPill_, lv_color_hex(borderColors[idx]), 0);
+      }
+      if (runningTempLabel_) {
+        lv_label_set_text(runningTempLabel_, shapeLaoText(modeTexts[idx]).c_str());
+      }
+      if (runningDrum_) {
+        lv_obj_set_style_arc_color(runningDrum_, lv_color_hex(wave1Colors[idx]), LV_PART_INDICATOR);
+      }
+      if (runningWaterWave1_) {
+        lv_obj_set_style_bg_color(runningWaterWave1_, lv_color_hex(wave1Colors[idx]), 0);
+      }
+      if (runningWaterWave2_) {
+        lv_obj_set_style_bg_color(runningWaterWave2_, lv_color_hex(wave2Colors[idx]), 0);
+      }
+    }
+    if (runningProgressBar_ && settings_) {
+      const uint32_t totalSec = static_cast<uint32_t>(settings_->durationMinutes[option - 1]) * 60U;
+      if (totalSec > 0) {
+        const uint32_t elapsedSec = (seconds <= totalSec) ? (totalSec - seconds) : 0U;
+        const uint8_t pct = static_cast<uint8_t>((elapsedSec * 100U) / totalSec);
+        lv_bar_set_value(runningProgressBar_, pct < 5 ? 5 : pct, LV_ANIM_OFF);
+      }
+    }
+  }
 }
 
 void WasherView::setConnection(bool wifiConnected, bool mqttConnected, int rssi) {
@@ -2351,7 +2799,6 @@ void WasherView::optionClicked(Object&, void* context) {
   const uint8_t option = static_cast<uint8_t>(reinterpret_cast<uintptr_t>(context));
   if (!instance_ || !instance_->listener_) return;
   if (!option) {
-    instance_->show(Page::Select);
     instance_->listener_->onPricePageOpened();
   }
   else instance_->listener_->onOptionSelected(option);

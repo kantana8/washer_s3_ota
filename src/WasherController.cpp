@@ -136,6 +136,9 @@ void WasherController::update() {
     if (view_.page() != Page::Settings && view_.page() != Page::Pin && view_.page() != Page::WifiScan) {
       view_.show(Page::Home);
     }
+  } else if (pageTimeoutAt_ && !activeOption_ && view_.page() == Page::QrCode) {
+    const uint32_t remSec = (pageTimeoutAt_ > now) ? ((pageTimeoutAt_ - now + 999U) / 1000U) : 0U;
+    view_.setQrTimeoutSeconds(remSec);
   }
   if (activeOption_ && paymentUntil_ && now >= paymentUntil_) {
     paymentUntil_ = 0;
@@ -144,9 +147,16 @@ void WasherController::update() {
   }
   if (activeOption_ && !paymentUntil_ && paymentSuccessUntil_ && now >= paymentSuccessUntil_) {
     paymentSuccessUntil_ = 0;
+    runningPreviewUntil_ = now + 5000U;
     view_.show(Page::Running);
     view_.setCountdown(remainingSeconds_, activeOption_);
     nextCountdownAt_ = now + 1000;
+  }
+  if (activeOption_ && runningPreviewUntil_ && now >= runningPreviewUntil_) {
+    runningPreviewUntil_ = 0;
+    if (view_.page() == Page::Running) {
+      view_.show(Page::Home);
+    }
   }
   if (activeOption_ && !paymentUntil_ && !paymentSuccessUntil_ && now >= nextCountdownAt_) {
     nextCountdownAt_ += 1000;
@@ -186,12 +196,20 @@ void WasherController::onOptionSelected(uint8_t option) {
   view_.setQrOption(option);
   view_.setPrice(option, prices_[option - 1]);
   pageTimeoutAt_ = millis() + config::PageTimeoutMs;
+  view_.setQrTimeoutSeconds(config::PageTimeoutMs / 1000U);
   publish("tid/price/option" + String(option), settings_.terminalId);
   publish("tid/qrcode/option" + String(option), settings_.terminalId);
   publish("tid/qrcode", settings_.terminalId + "/option" + String(option));
 }
 
 void WasherController::onPricePageOpened() {
+  if (activeOption_) {
+    runningPreviewUntil_ = 0;
+    view_.show(Page::Running);
+    view_.setCountdown(remainingSeconds_, activeOption_);
+    return;
+  }
+  view_.show(Page::Select);
   pageTimeoutAt_ = millis() + config::PageTimeoutMs;
   for (uint8_t option = 1; option <= 3; ++option) {
     publish("tid/price/option" + String(option), settings_.terminalId);
@@ -386,6 +404,7 @@ void WasherController::startWash(uint8_t option) {
   const uint32_t transferDurationMs = static_cast<uint32_t>(pulseCount) * 200U + 800U;
   paymentUntil_ = millis() + max(transferDurationMs, config::CreditTransferMs);
   paymentSuccessUntil_ = 0;
+  runningPreviewUntil_ = 0;
   publish("tid/status", settings_.terminalId + "/started/option" + String(option));
   publishCountdown();
   saveRuntime();
@@ -397,6 +416,7 @@ void WasherController::resumeWash(uint8_t option, uint32_t seconds) {
   remainingSeconds_ = seconds;
   paymentUntil_ = 0;
   paymentSuccessUntil_ = 0;
+  runningPreviewUntil_ = millis() + 5000U;
   successUntil_ = 0;
   view_.show(Page::Running);
   view_.setCountdown(seconds, option);
@@ -407,6 +427,7 @@ void WasherController::resumeWash(uint8_t option, uint32_t seconds) {
 
 void WasherController::finishWash() {
   const uint8_t finishedOption = activeOption_;
+  runningPreviewUntil_ = 0;
   view_.show(Page::Success);
   pendingWorkingDoneOption_ = finishedOption;
   lastFinishedOption_ = finishedOption;
@@ -428,6 +449,7 @@ void WasherController::stopWash(bool notifyServer) {
   remainingSeconds_ = 0;
   paymentUntil_ = 0;
   paymentSuccessUntil_ = 0;
+  runningPreviewUntil_ = 0;
   successUntil_ = 0;
   lastFinishedOption_ = 0;
   digitalWrite(config::RelayPin, LOW);
