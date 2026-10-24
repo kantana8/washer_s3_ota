@@ -43,6 +43,7 @@ class WasherView {
   void showOtaProgress(uint8_t percent, const char* message);
   void hideOtaProgress();
   Page page() const { return currentPage_; }
+  bool isQrLoaded() const { return qrCodeLoaded_; }
 
  private:
   static WasherView* instance_;
@@ -154,7 +155,7 @@ class WasherView {
   lv_obj_t* qrTimeoutCard_ = nullptr;
   lv_obj_t* qrTimeoutArc_ = nullptr;
   lv_obj_t* qrTimeoutValLabel_ = nullptr;
-  uint32_t qrTimeoutSec_ = 20;
+  uint32_t qrTimeoutSec_ = 30;
   bool qrCodeLoaded_ = false;
   bool qrCodeReceived_ = false;
   String qrPendingPayload_ = "";

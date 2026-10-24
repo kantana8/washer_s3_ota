@@ -14,6 +14,7 @@ constexpr uint8_t RelayPin = 45;
 constexpr uint8_t BuzzerPin = 46;
 
 constexpr uint32_t PageTimeoutMs = 20000;
+constexpr uint32_t QrScanTimeoutMs = 30000;
 constexpr uint32_t CreditTransferMs = 2200;
 constexpr uint32_t PaymentSuccessMs = 2200;
 constexpr uint32_t SuccessDelayMs = 5000;

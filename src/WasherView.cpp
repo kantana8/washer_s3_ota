@@ -1091,8 +1091,8 @@ void WasherView::buildPages() {
   lv_obj_align(qrTimeoutArc_, LV_ALIGN_TOP_MID, 0, 12);
   lv_arc_set_rotation(qrTimeoutArc_, 270);
   lv_arc_set_bg_angles(qrTimeoutArc_, 0, 360);
-  lv_arc_set_range(qrTimeoutArc_, 0, config::PageTimeoutMs / 1000U);
-  lv_arc_set_value(qrTimeoutArc_, config::PageTimeoutMs / 1000U);
+  lv_arc_set_range(qrTimeoutArc_, 0, config::QrScanTimeoutMs / 1000U);
+  lv_arc_set_value(qrTimeoutArc_, config::QrScanTimeoutMs / 1000U);
   lv_obj_set_style_arc_width(qrTimeoutArc_, 6, LV_PART_MAIN);
   lv_obj_set_style_arc_color(qrTimeoutArc_, lv_color_hex(0xE2E8F0), LV_PART_MAIN);
   lv_obj_set_style_arc_width(qrTimeoutArc_, 6, LV_PART_INDICATOR);
@@ -1102,7 +1102,7 @@ void WasherView::buildPages() {
   lv_obj_clear_flag(qrTimeoutArc_, LV_OBJ_FLAG_CLICKABLE);
 
   qrTimeoutValLabel_ = lv_label_create(qrTimeoutArc_);
-  lv_label_set_text_fmt(qrTimeoutValLabel_, "%us", static_cast<unsigned>(config::PageTimeoutMs / 1000U));
+  lv_label_set_text_fmt(qrTimeoutValLabel_, "%us", static_cast<unsigned>(config::QrScanTimeoutMs / 1000U));
   lv_obj_set_style_text_font(qrTimeoutValLabel_, &lv_font_montserrat_20, 0);
   lv_obj_set_style_text_color(qrTimeoutValLabel_, lv_color_hex(0x0B2239), 0);
   lv_obj_center(qrTimeoutValLabel_);
@@ -1112,6 +1112,7 @@ void WasherView::buildPages() {
   lv_obj_set_style_text_font(qrTimeTitle, &notosanslao_shaped_20, 0);
   lv_obj_set_style_text_color(qrTimeTitle, lv_color_hex(0x2B4C6B), 0);
   lv_obj_align(qrTimeTitle, LV_ALIGN_BOTTOM_MID, 0, -6);
+  lv_obj_add_flag(qrTimeoutCard_, LV_OBJ_FLAG_HIDDEN);
 
   // Bottom info bar (x=0, y=280, width=480, height=40, touching bottom edge)
   qrBottomBar_ = lv_obj_create(qr_.native());
@@ -2570,6 +2571,7 @@ void WasherView::setQrOption(uint8_t option) {
   qrPendingPayload_ = "";
   qrAnimationStartedAt_ = millis();
   if (qrCard_) lv_obj_add_flag(qrCard_, LV_OBJ_FLAG_HIDDEN);
+  if (qrTimeoutCard_) lv_obj_add_flag(qrTimeoutCard_, LV_OBJ_FLAG_HIDDEN);
   if (qrLoadingBox_) {
     lv_obj_clear_flag(qrLoadingBox_, LV_OBJ_FLAG_HIDDEN);
     triggerPopupBounce(qrLoadingBox_);
@@ -2609,6 +2611,12 @@ void WasherView::revealQrCode() {
     if (qrCard_) {
       lv_obj_clear_flag(qrCard_, LV_OBJ_FLAG_HIDDEN);
       triggerPopupBounce(qrCard_);
+    }
+    qrTimeoutSec_ = 0;
+    setQrTimeoutSeconds(config::QrScanTimeoutMs / 1000U);
+    if (qrTimeoutCard_) {
+      lv_obj_clear_flag(qrTimeoutCard_, LV_OBJ_FLAG_HIDDEN);
+      triggerPopupBounce(qrTimeoutCard_);
     }
   }
 }

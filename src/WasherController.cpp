@@ -131,14 +131,22 @@ void WasherController::update() {
     view_.show(Page::Pause);
   }
 
-  if (pageTimeoutAt_ && now >= pageTimeoutAt_ && !activeOption_) {
-    pageTimeoutAt_ = 0;
-    if (view_.page() != Page::Settings && view_.page() != Page::Pin && view_.page() != Page::WifiScan) {
-      view_.show(Page::Home);
+  if (pageTimeoutAt_ && !activeOption_) {
+    if (view_.page() == Page::QrCode && view_.isQrLoaded()) {
+      if (!qrCountdownStarted_) {
+        qrCountdownStarted_ = true;
+        pageTimeoutAt_ = now + config::QrScanTimeoutMs;
+      }
+      const uint32_t remSec = (pageTimeoutAt_ > now) ? ((pageTimeoutAt_ - now + 999U) / 1000U) : 0U;
+      view_.setQrTimeoutSeconds(remSec);
     }
-  } else if (pageTimeoutAt_ && !activeOption_ && view_.page() == Page::QrCode) {
-    const uint32_t remSec = (pageTimeoutAt_ > now) ? ((pageTimeoutAt_ - now + 999U) / 1000U) : 0U;
-    view_.setQrTimeoutSeconds(remSec);
+    if (now >= pageTimeoutAt_) {
+      pageTimeoutAt_ = 0;
+      qrCountdownStarted_ = false;
+      if (view_.page() != Page::Settings && view_.page() != Page::Pin && view_.page() != Page::WifiScan) {
+        view_.show(Page::Home);
+      }
+    }
   }
   if (activeOption_ && paymentUntil_ && now >= paymentUntil_) {
     paymentUntil_ = 0;
@@ -193,11 +201,11 @@ void WasherController::onOptionSelected(uint8_t option) {
     return;
   }
   selectedOption_ = option;
+  qrCountdownStarted_ = false;
   view_.show(Page::QrCode);
   view_.setQrOption(option);
   view_.setPrice(option, prices_[option - 1]);
   pageTimeoutAt_ = millis() + config::PageTimeoutMs;
-  view_.setQrTimeoutSeconds(config::PageTimeoutMs / 1000U);
   publish("tid/price/option" + String(option), settings_.terminalId);
   publish("tid/qrcode/option" + String(option), settings_.terminalId);
   publish("tid/qrcode", settings_.terminalId + "/option" + String(option));
@@ -218,6 +226,7 @@ void WasherController::onPricePageOpened() {
 }
 
 void WasherController::onBackRequested() {
+  qrCountdownStarted_ = false;
   if (view_.page() == Page::QrCode) {
     view_.show(Page::Select);
     pageTimeoutAt_ = millis() + config::PageTimeoutMs;
