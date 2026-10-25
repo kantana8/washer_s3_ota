@@ -11,6 +11,15 @@
 
 namespace {
 
+struct RtcWashState {
+  uint32_t magic;
+  uint8_t activeOption;
+  uint32_t remainingSeconds;
+};
+
+constexpr uint32_t kRtcWashMagic = 0x57415348U; // 'WASH'
+RTC_NOINIT_ATTR RtcWashState s_rtcWashState;
+
 QueueHandle_t relayQueue = nullptr;
 
 void relayTaskFunc(void* /*param*/) {
@@ -170,7 +179,11 @@ void WasherController::update() {
     nextCountdownAt_ += 1000;
     if (remainingSeconds_ > 0) --remainingSeconds_;
     view_.setCountdown(remainingSeconds_, activeOption_);
-    publishCountdown();
+    // Update zero-wait RTC_NOINIT_ATTR state every 1s (survives brownout/soft reset with 1s accuracy)
+    s_rtcWashState.magic = kRtcWashMagic;
+    s_rtcWashState.activeOption = activeOption_;
+    s_rtcWashState.remainingSeconds = remainingSeconds_;
+    // Persist to NVS Flash every 15s (survives full cold power outage without wearing Flash or spamming MQTT)
     if ((remainingSeconds_ % 15 == 0) || (remainingSeconds_ == 0)) {
       saveRuntime();
     }
@@ -368,9 +381,10 @@ void WasherController::reconnectMqtt() {
   const String clientId = "WASHER_" + settings_.terminalId + "_" + String(static_cast<uint32_t>(ESP.getEfuseMac()), HEX);
   mqtt_.setServer(settings_.mqttHost.c_str(), settings_.mqttPort);
   Serial.printf("[MQTT] connecting to %s:%u (user=%s)\n", settings_.mqttHost.c_str(), settings_.mqttPort, settings_.mqttUser.c_str());
+  const String willMsg = settings_.terminalId + "/disconnected";
   bool connected = settings_.mqttUser.isEmpty()
-      ? mqtt_.connect(clientId.c_str())
-      : mqtt_.connect(clientId.c_str(), settings_.mqttUser.c_str(), settings_.mqttPassword.c_str());
+      ? mqtt_.connect(clientId.c_str(), nullptr, nullptr, "tid/status", 0, false, willMsg.c_str())
+      : mqtt_.connect(clientId.c_str(), settings_.mqttUser.c_str(), settings_.mqttPassword.c_str(), "tid/status", 0, false, willMsg.c_str());
   if (!connected) return;
   subscribeTopics();
   publish("tid/status", settings_.terminalId + "/check");
@@ -623,6 +637,9 @@ void WasherController::beep(uint8_t count) {
 }
 
 void WasherController::saveRuntime() {
+  s_rtcWashState.magic = kRtcWashMagic;
+  s_rtcWashState.activeOption = activeOption_;
+  s_rtcWashState.remainingSeconds = remainingSeconds_;
   Preferences preferences;
   preferences.begin("washer-run", false);
   preferences.putUChar("option", activeOption_);
@@ -633,12 +650,31 @@ void WasherController::saveRuntime() {
 void WasherController::loadRuntime() {
   Preferences preferences;
   preferences.begin("washer-run", true);
-  activeOption_ = preferences.getUChar("option", 0);
-  remainingSeconds_ = preferences.getUInt("remaining", 0);
+  const uint8_t nvsOption = preferences.getUChar("option", 0);
+  const uint32_t nvsRemaining = preferences.getUInt("remaining", 0);
   preferences.end();
+
+  if (s_rtcWashState.magic == kRtcWashMagic &&
+      s_rtcWashState.activeOption >= 1 && s_rtcWashState.activeOption <= 3 &&
+      s_rtcWashState.remainingSeconds > 0 &&
+      (nvsOption == 0 || (s_rtcWashState.activeOption == nvsOption && s_rtcWashState.remainingSeconds <= nvsRemaining + 15U))) {
+    activeOption_ = s_rtcWashState.activeOption;
+    remainingSeconds_ = s_rtcWashState.remainingSeconds;
+    Serial.printf("[RESTORE] Loaded 1s-accurate state from RTC_NOINIT: opt=%u, rem=%lu s\n",
+                  activeOption_, static_cast<unsigned long>(remainingSeconds_));
+  } else {
+    activeOption_ = nvsOption;
+    remainingSeconds_ = nvsRemaining;
+    s_rtcWashState.magic = activeOption_ ? kRtcWashMagic : 0;
+    s_rtcWashState.activeOption = activeOption_;
+    s_rtcWashState.remainingSeconds = remainingSeconds_;
+  }
 }
 
 void WasherController::clearRuntime() {
+  s_rtcWashState.magic = 0;
+  s_rtcWashState.activeOption = 0;
+  s_rtcWashState.remainingSeconds = 0;
   Preferences preferences;
   preferences.begin("washer-run", false);
   preferences.clear();
