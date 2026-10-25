@@ -18,6 +18,7 @@ struct RtcWashState {
 };
 
 constexpr uint32_t kRtcWashMagic = 0x57415348U; // 'WASH'
+constexpr char kFirmwareVersion[] = "3.5-v1.2";
 RTC_NOINIT_ATTR RtcWashState s_rtcWashState;
 
 QueueHandle_t relayQueue = nullptr;
@@ -219,9 +220,7 @@ void WasherController::onOptionSelected(uint8_t option) {
   view_.setQrOption(option);
   view_.setPrice(option, prices_[option - 1]);
   pageTimeoutAt_ = millis() + config::PageTimeoutMs;
-  publish("tid/price/option" + String(option), settings_.terminalId);
   publish("tid/qrcode/option" + String(option), settings_.terminalId);
-  publish("tid/qrcode", settings_.terminalId + "/option" + String(option));
 }
 
 void WasherController::onPricePageOpened() {
@@ -233,8 +232,10 @@ void WasherController::onPricePageOpened() {
   }
   view_.show(Page::Select);
   pageTimeoutAt_ = millis() + config::PageTimeoutMs;
-  for (uint8_t option = 1; option <= 3; ++option) {
-    publish("tid/price/option" + String(option), settings_.terminalId);
+  if (prices_[0] == 0 && prices_[1] == 0 && prices_[2] == 0 && !optionOffline_[0]) {
+    for (uint8_t option = 1; option <= 3; ++option) {
+      publish("tid/price/option" + String(option), settings_.terminalId);
+    }
   }
 }
 
@@ -353,14 +354,10 @@ void WasherController::handleMqtt(const String& topic, const String& message) {
       }
     }
     else if (message == "connect_test") {
-      publish("tid/status", settings_.terminalId + "/connected");
+      const int32_t rssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : -100;
+      publish("tid/status", settings_.terminalId + "/connected/" + String(rssi) + "/" + kFirmwareVersion);
       if (activeOption_) {
-        publish("tid/status", settings_.terminalId + "/started/option" + String(activeOption_));
         publishCountdown();
-      } else {
-        for (uint8_t option = 1; option <= 3; ++option) {
-          publish(countdownTopic(option), "{\"current_page\":0,\"countdown\":0}", true);
-        }
       }
     }
     else if (message == "stop") stopWash(true);
@@ -387,11 +384,9 @@ void WasherController::reconnectMqtt() {
       : mqtt_.connect(clientId.c_str(), settings_.mqttUser.c_str(), settings_.mqttPassword.c_str(), "tid/status", 0, false, willMsg.c_str());
   if (!connected) return;
   subscribeTopics();
-  publish("tid/status", settings_.terminalId + "/check");
+  const int32_t rssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : -100;
+  publish("tid/status", settings_.terminalId + "/check/" + String(rssi) + "/" + kFirmwareVersion);
   publishConfiguration();
-  for (uint8_t option = 1; option <= 3; ++option) {
-    publish("tid/price/option" + String(option), settings_.terminalId);
-  }
 
   if (pendingWorkingDoneOption_) {
     publish("tid/status", settings_.terminalId + "/working_done/option" + String(pendingWorkingDoneOption_));
@@ -424,7 +419,6 @@ void WasherController::publish(const String& topic, const String& message, bool 
 
 void WasherController::publishConfiguration() {
   for (uint8_t i = 0; i < 3; ++i) {
-    publish(settings_.terminalId + "/pulse/valeu" + String(i + 1), String(settings_.pulseCount[i]), true);
     publish(settings_.terminalId + "/pulse/value" + String(i + 1), String(settings_.pulseCount[i]), true);
   }
 }
@@ -842,6 +836,10 @@ void WasherController::performOtaUpdate(const String& url) {
           lastProgressTime = millis();
           view_.showOtaProgress(percent, "ກຳລັງດາວໂຫຼດ...");
           washerui::App.update();
+          if (percent % 10 == 0 && mqtt_.connected()) {
+            publish(tidTopic("/ota/status"), "progress:" + String(percent));
+            mqtt_.loop();
+          }
           Serial.printf("[OTA] %d%% (%d / %d bytes)\n", percent, written, contentLength);
         }
       }
