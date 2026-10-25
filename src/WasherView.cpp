@@ -2035,7 +2035,7 @@ void WasherView::buildSettings() {
   saveButton_.align(Align::TopRight, -4, 3);
   saveButton_.color(0x24A148);
   saveButton_.onClicked(saveClicked, this);
-  lv_obj_t* title = makeLabel(settingsPage_.native(), "SETTINGS", 204, 13, &lv_font_montserrat_14);
+  lv_obj_t* title = makeLabel(settingsPage_.native(), (String("SETTINGS (") + config::FirmwareVersion + ")").c_str(), 176, 13, &lv_font_montserrat_14);
   lv_obj_set_style_text_color(title, lv_color_hex(0x1C2B36), 0);
 
   tabView_ = lv_tabview_create(settingsPage_.native(), LV_DIR_TOP, 38);
