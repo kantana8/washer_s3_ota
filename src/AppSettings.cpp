@@ -6,6 +6,30 @@ void AppSettings::load() {
   bool needsSave = !hasOwnSettings;
   if (hasOwnSettings) {
     terminalId = preferences.getString("terminal", terminalId);
+    if (preferences.isKey("mqtt_host")) {
+      mqttHost = preferences.getString("mqtt_host", mqttHost);
+      if (mqttHost.isEmpty() || mqttHost == "159.89.196.165") {
+        mqttHost = config::MqttHost;
+        mqttUser = config::MqttUser;
+        mqttPassword = config::MqttPassword;
+        needsSave = true;
+      }
+    } else needsSave = true;
+    if (preferences.isKey("mqtt_port")) {
+      mqttPort = preferences.getUShort("mqtt_port", mqttPort);
+      if (mqttPort == 0) mqttPort = config::MqttPort;
+    } else needsSave = true;
+    if (preferences.isKey("mqtt_user") && !needsSave) {
+      mqttUser = preferences.getString("mqtt_user", mqttUser);
+      if (mqttHost == "broker.emqx.io" && mqttUser == "root") {
+        mqttUser = "";
+        mqttPassword = "";
+        needsSave = true;
+      }
+    } else needsSave = true;
+    if (preferences.isKey("mqtt_pass") && !needsSave) {
+      mqttPassword = preferences.getString("mqtt_pass", mqttPassword);
+    } else needsSave = true;
     brightness = preferences.getUChar("brightness", brightness);
     volume = preferences.getUChar("volume", volume);
     if (volume > 100) volume = 100;
@@ -56,6 +80,10 @@ void AppSettings::save() const {
   Preferences preferences;
   preferences.begin("washer", false);
   preferences.putString("terminal", terminalId);
+  preferences.putString("mqtt_host", mqttHost);
+  preferences.putUShort("mqtt_port", mqttPort);
+  preferences.putString("mqtt_user", mqttUser);
+  preferences.putString("mqtt_pass", mqttPassword);
   preferences.putUChar("brightness", brightness);
   preferences.putUChar("volume", volume);
   preferences.putString("pin", settingsPin);

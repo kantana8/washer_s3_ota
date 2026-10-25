@@ -64,7 +64,7 @@ void WasherController::begin() {
   configTime(7 * 3600, 0, "pool.ntp.org", "time.google.com");
 
   wifiClient_.setTimeout(2);
-  mqtt_.setServer(config::MqttHost, config::MqttPort);
+  mqtt_.setServer(settings_.mqttHost.c_str(), settings_.mqttPort);
   mqtt_.setBufferSize(1024);
   mqtt_.setKeepAlive(30);
   mqtt_.setSocketTimeout(2);
@@ -238,6 +238,7 @@ void WasherController::onBackRequested() {
 
 void WasherController::onSettingsSaved() {
   mqtt_.disconnect();
+  mqtt_.setServer(settings_.mqttHost.c_str(), settings_.mqttPort);
   nextMqttAttemptAt_ = 0;
 }
 
@@ -338,7 +339,17 @@ void WasherController::handleMqtt(const String& topic, const String& message) {
         view_.show(Page::Pause);
       }
     }
-    else if (message == "connect_test") publish("tid/status", settings_.terminalId + "/connected");
+    else if (message == "connect_test") {
+      publish("tid/status", settings_.terminalId + "/connected");
+      if (activeOption_) {
+        publish("tid/status", settings_.terminalId + "/started/option" + String(activeOption_));
+        publishCountdown();
+      } else {
+        for (uint8_t option = 1; option <= 3; ++option) {
+          publish(countdownTopic(option), "{\"current_page\":0,\"countdown\":0}", true);
+        }
+      }
+    }
     else if (message == "stop") stopWash(true);
     return;
   }
@@ -355,8 +366,12 @@ void WasherController::handleMqtt(const String& topic, const String& message) {
 void WasherController::reconnectMqtt() {
   nextMqttAttemptAt_ = millis() + 5000;
   const String clientId = "WASHER_" + settings_.terminalId + "_" + String(static_cast<uint32_t>(ESP.getEfuseMac()), HEX);
-  Serial.printf("[MQTT] connecting to %s:%u\n", config::MqttHost, config::MqttPort);
-  if (!mqtt_.connect(clientId.c_str(), config::MqttUser, config::MqttPassword)) return;
+  mqtt_.setServer(settings_.mqttHost.c_str(), settings_.mqttPort);
+  Serial.printf("[MQTT] connecting to %s:%u (user=%s)\n", settings_.mqttHost.c_str(), settings_.mqttPort, settings_.mqttUser.c_str());
+  bool connected = settings_.mqttUser.isEmpty()
+      ? mqtt_.connect(clientId.c_str())
+      : mqtt_.connect(clientId.c_str(), settings_.mqttUser.c_str(), settings_.mqttPassword.c_str());
+  if (!connected) return;
   subscribeTopics();
   publish("tid/status", settings_.terminalId + "/check");
   publishConfiguration();
@@ -401,7 +416,12 @@ void WasherController::publishConfiguration() {
 }
 
 void WasherController::startWash(uint8_t option) {
-  if (activeOption_ || option < 1 || option > 3) return;
+  if (option < 1 || option > 3) return;
+  if (activeOption_) {
+    publish("tid/status", settings_.terminalId + "/started/option" + String(activeOption_));
+    publishCountdown();
+    return;
+  }
   pageTimeoutAt_ = 0;
   selectedOption_ = option;
   activeOption_ = option;
@@ -805,7 +825,7 @@ void WasherController::performOtaUpdate(const String& url) {
       washerui::App.update();
 
       const String clientId = "WASHER_OTA_" + settings_.terminalId;
-      if (mqtt_.connect(clientId.c_str(), config::MqttUser, config::MqttPassword)) {
+      if (settings_.mqttUser.isEmpty() ? mqtt_.connect(clientId.c_str()) : mqtt_.connect(clientId.c_str(), settings_.mqttUser.c_str(), settings_.mqttPassword.c_str())) {
         mqtt_.publish(tidTopic("/ota/status").c_str(), "success");
         mqtt_.loop();
         delay(200);

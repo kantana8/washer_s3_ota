@@ -224,6 +224,11 @@ class WasherView {
   washerui::Button saveButton_{LV_SYMBOL_SAVE};
   lv_obj_t* tabView_ = nullptr;
   lv_obj_t* terminalInput_ = nullptr;
+  lv_obj_t* mqttHostInput_ = nullptr;
+  lv_obj_t* mqttPortInput_ = nullptr;
+  lv_obj_t* mqttUserInput_ = nullptr;
+  lv_obj_t* mqttPassInput_ = nullptr;
+  lv_obj_t* mqttPassToggle_ = nullptr;
   lv_obj_t* pinInput_ = nullptr;
   lv_obj_t* wifiSsidInput_ = nullptr;
   lv_obj_t* wifiPasswordInput_ = nullptr;

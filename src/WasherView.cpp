@@ -2045,7 +2045,7 @@ void WasherView::buildSettings() {
   lv_obj_t* wifiTab = lv_tabview_add_tab(tabView_, "WiFi");
   lv_obj_t* pinTab = lv_tabview_add_tab(tabView_, "PIN");
   lv_obj_t* optionTab = lv_tabview_add_tab(tabView_, "OPTION");
-  lv_obj_t* terminalTab = lv_tabview_add_tab(tabView_, "TID");
+  lv_obj_t* terminalTab = lv_tabview_add_tab(tabView_, "MQTT");
   lv_obj_t* timerTab = lv_tabview_add_tab(tabView_, "TIMER");
   lv_obj_t* displayTab = lv_tabview_add_tab(tabView_, "DISPLAY");
 
@@ -2233,9 +2233,28 @@ void WasherView::buildSettings() {
   lv_obj_set_style_text_color(optNote, lv_color_hex(0x8A9BA8), 0);
   lv_obj_set_pos(optNote, 14, 166);
 
-  makeLabel(terminalTab, "TERMINAL ID", 12, 16, &lv_font_montserrat_14);
-  terminalInput_ = makeTextArea(terminalTab, 12, 52, 280, settings_->terminalId.c_str());
-  makeLabel(terminalTab, "ຄ່ານີ້ຕ້ອງກົງກັບ server", 12, 105, &notosanslao_shaped_25);
+  makeLabel(terminalTab, "TID:", 6, 12, &lv_font_montserrat_14);
+  terminalInput_ = makeTextArea(terminalTab, 54, 2, 180, settings_->terminalId.c_str());
+  makeLabel(terminalTab, "PORT:", 246, 12, &lv_font_montserrat_14);
+  mqttPortInput_ = makeTextArea(terminalTab, 304, 2, 140, String(settings_->mqttPort).c_str());
+
+  makeLabel(terminalTab, "HOST:", 6, 58, &lv_font_montserrat_14);
+  mqttHostInput_ = makeTextArea(terminalTab, 58, 48, 386, settings_->mqttHost.c_str());
+
+  makeLabel(terminalTab, "USER:", 6, 104, &lv_font_montserrat_14);
+  mqttUserInput_ = makeTextArea(terminalTab, 58, 94, 152, settings_->mqttUser.c_str());
+  makeLabel(terminalTab, "PASS:", 218, 104, &lv_font_montserrat_14);
+  mqttPassInput_ = makeTextArea(terminalTab, 270, 94, 132, settings_->mqttPassword.c_str(), true);
+  mqttPassToggle_ = lv_btn_create(terminalTab);
+  lv_obj_set_size(mqttPassToggle_, 38, 40);
+  lv_obj_set_pos(mqttPassToggle_, 406, 94);
+  lv_obj_set_style_bg_color(mqttPassToggle_, lv_color_hex(0x506271), 0);
+  lv_obj_add_event_cb(mqttPassToggle_, wifiPassToggleEvent, LV_EVENT_CLICKED, reinterpret_cast<void*>(2));
+  lv_obj_t* eyeLabelMqtt = lv_label_create(mqttPassToggle_);
+  lv_label_set_text(eyeLabelMqtt, LV_SYMBOL_EYE_OPEN);
+  lv_obj_center(eyeLabelMqtt);
+
+  makeLabel(terminalTab, "ກົດປຸ່ມ SAVE ເທິງຂວາ ເພື່ອບັນທຶກ TID & MQTT", 8, 144, &notosanslao_shaped_20);
 
   String timeOptions;
   for (uint16_t n = 1; n <= 180; ++n) { if (n > 1) timeOptions += '\n'; timeOptions += n; }
@@ -2322,7 +2341,11 @@ void WasherView::buildSettings() {
   lv_obj_add_event_cb(wifiSsid2Input_, textAreaEvent, LV_EVENT_FOCUSED, reinterpret_cast<void*>(0));
   lv_obj_add_event_cb(wifiPassword2Input_, textAreaEvent, LV_EVENT_FOCUSED, reinterpret_cast<void*>(0));
   lv_obj_add_event_cb(pinInput_, textAreaEvent, LV_EVENT_FOCUSED, reinterpret_cast<void*>(1));
-  lv_obj_add_event_cb(terminalInput_, textAreaEvent, LV_EVENT_FOCUSED, reinterpret_cast<void*>(1));
+  lv_obj_add_event_cb(terminalInput_, textAreaEvent, LV_EVENT_FOCUSED, reinterpret_cast<void*>(0));
+  if (mqttHostInput_) lv_obj_add_event_cb(mqttHostInput_, textAreaEvent, LV_EVENT_FOCUSED, reinterpret_cast<void*>(0));
+  if (mqttPortInput_) lv_obj_add_event_cb(mqttPortInput_, textAreaEvent, LV_EVENT_FOCUSED, reinterpret_cast<void*>(1));
+  if (mqttUserInput_) lv_obj_add_event_cb(mqttUserInput_, textAreaEvent, LV_EVENT_FOCUSED, reinterpret_cast<void*>(0));
+  if (mqttPassInput_) lv_obj_add_event_cb(mqttPassInput_, textAreaEvent, LV_EVENT_FOCUSED, reinterpret_cast<void*>(0));
 
   keyboard_ = lv_keyboard_create(settingsPage_.native());
   lv_obj_set_size(keyboard_, 480, 176);
@@ -3464,7 +3487,7 @@ void WasherView::wifiPassToggleEvent(lv_event_t* event) {
   if (!instance_) return;
   if (instance_->listener_) instance_->listener_->beep(1);
   const uint8_t idx = static_cast<uint8_t>(reinterpret_cast<uintptr_t>(lv_event_get_user_data(event)));
-  lv_obj_t* targetInput = (idx == 0) ? instance_->wifiPasswordInput_ : instance_->wifiPassword2Input_;
+  lv_obj_t* targetInput = (idx == 0) ? instance_->wifiPasswordInput_ : ((idx == 1) ? instance_->wifiPassword2Input_ : instance_->mqttPassInput_);
   if (!targetInput) return;
 
   bool isPass = lv_textarea_get_password_mode(targetInput);
@@ -3548,6 +3571,22 @@ void WasherView::saveSettings() {
   settings_->terminalId = lv_textarea_get_text(terminalInput_);
   settings_->terminalId.trim();
   if (settings_->terminalId.isEmpty()) settings_->terminalId = "WASHER001";
+  if (mqttHostInput_) {
+    settings_->mqttHost = lv_textarea_get_text(mqttHostInput_);
+    settings_->mqttHost.trim();
+    if (settings_->mqttHost.isEmpty()) settings_->mqttHost = config::MqttHost;
+  }
+  if (mqttPortInput_) {
+    int p = String(lv_textarea_get_text(mqttPortInput_)).toInt();
+    settings_->mqttPort = (p > 0 && p <= 65535) ? static_cast<uint16_t>(p) : config::MqttPort;
+  }
+  if (mqttUserInput_) {
+    settings_->mqttUser = lv_textarea_get_text(mqttUserInput_);
+    settings_->mqttUser.trim();
+  }
+  if (mqttPassInput_) {
+    settings_->mqttPassword = lv_textarea_get_text(mqttPassInput_);
+  }
   String pin = lv_textarea_get_text(pinInput_);
   pin.trim();
   if (pin.length() >= 4) settings_->settingsPin = pin;
