@@ -6,11 +6,12 @@
 #include "AppSettings.h"
 #include "Assets.h"
 
-enum class Page : uint8_t { Home, Select, QrCode, Payment, PaymentSuccess, Running, Success, Pause, Pin, Settings, WifiScan };
+enum class Page : uint8_t { Home, Select, QrCode, Payment, PaymentSuccess, Running, Success, Pause, Pin, Settings, WifiScan, SelectBank };
 
 class WasherViewListener {
  public:
   virtual void onOptionSelected(uint8_t option) = 0;
+  virtual void onBankSelected(const char* bankCode) = 0;
   virtual void onPricePageOpened() = 0;
   virtual void onBackRequested() = 0;
   virtual void onSettingsSaved() = 0;
@@ -28,6 +29,8 @@ class WasherView {
   void update();
   void show(Page page);
   void setPrice(uint8_t option, uint32_t price);
+  void setSelectBankOption(uint8_t option);
+  void setSelectedBank(const char* bankCode);
   void setQrCode(const String& payload);
   void setQrOption(uint8_t option);
   void setQrTimeoutSeconds(uint32_t seconds);
@@ -49,6 +52,7 @@ class WasherView {
   static WasherView* instance_;
   static void optionClicked(washerui::Object&, void* context);
   static void priceCardClicked(lv_event_t* event);
+  static void bankCardClicked(lv_event_t* event);
   static void backClicked(washerui::Object&, void* context);
   static void settingsClicked(washerui::Object&, void* context);
   static void saveClicked(washerui::Object&, void* context);
@@ -73,6 +77,7 @@ class WasherView {
   void updateOptionTabDisplay();
 
   void buildPages();
+  void buildSelectBankPage();
   void buildPinPage();
   void buildSettings();
   void buildWifiScanPage();
@@ -132,6 +137,16 @@ class WasherView {
   lv_obj_t* priceCards_[3] = {};
   washerui::Button selectBack_{LV_SYMBOL_LEFT};
 
+  washerui::Rect selectBank_;
+  washerui::Label selectBankTitle_{"ເລືອກທະນາຄານ ຫຼື ກະເປົາເງິນ"};
+  washerui::Label selectBankSubTitle_{"Select Bank or E-Wallet"};
+  lv_obj_t* selectBankDivider_ = nullptr;
+  washerui::Button selectBankBack_{LV_SYMBOL_LEFT};
+  lv_obj_t* bankCards_[6] = {};
+  lv_obj_t* selectBankBottomBar_ = nullptr;
+  washerui::Label selectBankInfoLabel_;
+  void updateSelectBankInfo(uint8_t option);
+
   washerui::Rect qr_;
   washerui::Label qrTitle_{"ສະແກນຈ່າຍເງິນດ້ວຍແອບທະນາຄານຫຼືກະເປົ໋າເງິນໂທລະສັບ"};
   washerui::Label qrSubTitle_{"Scan to pay with Mobile Banking or E-Wallet"};
@@ -154,6 +169,9 @@ class WasherView {
   washerui::Label qrLoadingLabel_{"ກຳລັງໂຫຼດ"};
   lv_obj_t* qrTimeoutCard_ = nullptr;
   lv_obj_t* qrLapnetCard_ = nullptr;
+  lv_obj_t* qrLapnetImg_ = nullptr;
+  lv_obj_t* qrLapnetTitle_ = nullptr;
+  lv_obj_t* qrLapnetSub_ = nullptr;
   lv_obj_t* qrTimeoutArc_ = nullptr;
   lv_obj_t* qrTimeoutValLabel_ = nullptr;
   uint32_t qrTimeoutSec_ = 30;

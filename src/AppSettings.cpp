@@ -61,6 +61,7 @@ void AppSettings::load() {
       pulseCount[i] = preferences.getUChar(pulseKey.c_str(), pulseCount[i]);
       durationMinutes[i] = preferences.getUShort(timeKey.c_str(), durationMinutes[i]);
     }
+    gatewayBcelMode = preferences.getBool("gw_bcel", gatewayBcelMode);
   }
   preferences.end();
 
@@ -99,5 +100,15 @@ void AppSettings::save() const {
     preferences.putUChar(pulseKey.c_str(), pulseCount[i]);
     preferences.putUShort(timeKey.c_str(), durationMinutes[i]);
   }
+  preferences.putBool("gw_bcel", gatewayBcelMode);
   preferences.end();
+}
+
+void AppSettings::saveGatewayMode(bool bcelMode) {
+  gatewayBcelMode = bcelMode;
+  Preferences preferences;
+  if (preferences.begin("washer", false)) {
+    preferences.putBool("gw_bcel", gatewayBcelMode);
+    preferences.end();
+  }
 }

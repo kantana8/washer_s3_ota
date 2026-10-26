@@ -321,6 +321,7 @@ void WasherView::begin(AppSettings& settings, WasherViewListener& listener) {
   settings_ = &settings;
   listener_ = &listener;
   buildPages();
+  buildSelectBankPage();
   buildPinPage();
   buildSettings();
   buildWifiScanPage();
@@ -1086,10 +1087,17 @@ void WasherView::buildPages() {
   lv_obj_set_style_pad_all(qrLapnetCard_, 0, 0);
   lv_obj_clear_flag(qrLapnetCard_, LV_OBJ_FLAG_SCROLLABLE);
 
-  lv_obj_t* qrLapnetImg = lv_img_create(qrLapnetCard_);
-  lv_img_set_src(qrLapnetImg, &img_lapnet);
-  lv_obj_center(qrLapnetImg);
-  lv_obj_clear_flag(qrLapnetImg, LV_OBJ_FLAG_CLICKABLE);
+  qrLapnetImg_ = lv_img_create(qrLapnetCard_);
+  lv_img_set_src(qrLapnetImg_, &img_lapnet);
+  lv_obj_center(qrLapnetImg_);
+  lv_obj_clear_flag(qrLapnetImg_, LV_OBJ_FLAG_CLICKABLE);
+
+  qrLapnetTitle_ = lv_label_create(qrLapnetCard_);
+  lv_label_set_text(qrLapnetTitle_, "BCEL OnePay");
+  lv_obj_set_style_text_font(qrLapnetTitle_, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_color(qrLapnetTitle_, lv_color_hex(0x0B2239), 0);
+  lv_obj_align(qrLapnetTitle_, LV_ALIGN_BOTTOM_MID, 0, -10);
+  lv_obj_add_flag(qrLapnetTitle_, LV_OBJ_FLAG_HIDDEN);
 
   // Right-side QR Page Countdown Timer Card (centered in the right space x=356..468)
   qrTimeoutCard_ = lv_obj_create(qr_.native());
@@ -1984,6 +1992,114 @@ void WasherView::buildPages() {
   lv_obj_align(pEngSub, LV_ALIGN_BOTTOM_MID, 0, -10);
 }
 
+void WasherView::buildSelectBankPage() {
+  configurePage(selectBank_, 0xB8DCFA);
+  lv_obj_set_style_bg_grad_color(selectBank_.native(), lv_color_hex(0xE2F1FD), LV_PART_MAIN);
+  lv_obj_set_style_bg_grad_dir(selectBank_.native(), LV_GRAD_DIR_VER, LV_PART_MAIN);
+
+  selectBankTitle_.parent(selectBank_);
+  selectBankTitle_.font(&notosanslao_shaped_20);
+  selectBankTitle_.textColor(0x0B2239);
+  selectBankTitle_.align(Align::TopLeft, 130, 8);
+  lv_obj_set_width(selectBankTitle_.native(), 340);
+  lv_obj_set_style_text_align(selectBankTitle_.native(), LV_TEXT_ALIGN_CENTER, 0);
+
+  selectBankDivider_ = lv_obj_create(selectBank_.native());
+  lv_obj_set_size(selectBankDivider_, 340, 2);
+  lv_obj_set_pos(selectBankDivider_, 130, 58);
+  lv_obj_set_style_bg_color(selectBankDivider_, lv_color_hex(0x5CA2DC), 0);
+  lv_obj_set_style_border_width(selectBankDivider_, 0, 0);
+  lv_obj_clear_flag(selectBankDivider_, LV_OBJ_FLAG_SCROLLABLE);
+
+  selectBankSubTitle_.parent(selectBank_);
+  selectBankSubTitle_.font(&lv_font_montserrat_14);
+  selectBankSubTitle_.textColor(0x2B4C6B);
+  selectBankSubTitle_.text("Select Bank or E-Wallet (Phajay)");
+  lv_obj_align_to(selectBankSubTitle_.native(), selectBankTitle_.native(), LV_ALIGN_OUT_BOTTOM_MID, 0, 4);
+
+  selectBankBack_.parent(selectBank_);
+  selectBankBack_.size(116, 50);
+  selectBankBack_.align(Align::TopLeft, 10, 8);
+  selectBankBack_.color(0x0A5C9E);
+  selectBankBack_.radius(8);
+  selectBankBack_.text(LV_SYMBOL_LEFT "  BACK");
+  selectBankBack_.label().font(&lv_font_montserrat_20);
+  selectBankBack_.onClicked(backClicked, this);
+
+  static const char* kBankCodes[6] = {"bcel", "jdb", "ldb", "ib", "stb", "m-money"};
+  static const char* kBankNames[6] = {"BCEL OnePay", "JDB Yes Pay", "LDB Trust", "IB Cool", "ST Bank", "M-MoneyX"};
+  static const uint32_t kBankColors[6] = {0xE11D48, 0x0284C7, 0x2563EB, 0x7C3AED, 0x059669, 0xEA580C};
+  static const lv_img_dsc_t* kBankIcons48[6] = {
+    &img_bank_bcel_48, &img_bank_jdb_48, &img_bank_ldb_48,
+    &img_bank_ib_48, &img_bank_stb_48, &img_bank_mmoney_48
+  };
+
+  for (uint8_t i = 0; i < 6; ++i) {
+    const int col = i % 3;
+    const int row = i / 3;
+    const int xPos = 12 + col * 156;
+    const int yPos = 66 + row * 106;
+
+    lv_obj_t* card = lv_obj_create(selectBank_.native());
+    bankCards_[i] = card;
+    lv_obj_set_size(card, 144, 98);
+    lv_obj_set_pos(card, xPos, yPos);
+    lv_obj_set_style_radius(card, 12, 0);
+    lv_obj_set_style_bg_color(card, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(card, 2, 0);
+    lv_obj_set_style_border_color(card, lv_color_hex(kBankColors[i]), 0);
+    lv_obj_set_style_shadow_width(card, 12, 0);
+    lv_obj_set_style_shadow_opa(card, LV_OPA_20, 0);
+    lv_obj_set_style_shadow_color(card, lv_color_hex(0x173E59), 0);
+    lv_obj_set_style_shadow_ofs_y(card, 4, 0);
+    lv_obj_set_style_pad_all(card, 0, 0);
+    lv_obj_set_style_translate_y(card, 2, LV_STATE_PRESSED);
+    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(card, bankCardClicked, LV_EVENT_CLICKED, const_cast<char*>(kBankCodes[i]));
+
+    lv_obj_t* icon = lv_img_create(card);
+    lv_img_set_src(icon, kBankIcons48[i]);
+    lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 8);
+    lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* pill = lv_obj_create(card);
+    lv_obj_set_size(pill, 128, 24);
+    lv_obj_align(pill, LV_ALIGN_BOTTOM_MID, 0, -7);
+    lv_obj_set_style_radius(pill, 12, 0);
+    lv_obj_set_style_bg_color(pill, lv_color_hex(kBankColors[i]), 0);
+    lv_obj_set_style_bg_opa(pill, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(pill, 0, 0);
+    lv_obj_set_style_pad_all(pill, 0, 0);
+    lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(pill, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* lbl = lv_label_create(pill);
+    lv_label_set_text(lbl, kBankNames[i]);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(lbl, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_center(lbl);
+  }
+
+  selectBankBottomBar_ = lv_obj_create(selectBank_.native());
+  lv_obj_set_size(selectBankBottomBar_, 480, 40);
+  lv_obj_set_pos(selectBankBottomBar_, 0, 280);
+  lv_obj_set_style_radius(selectBankBottomBar_, 0, 0);
+  lv_obj_set_style_bg_color(selectBankBottomBar_, lv_color_hex(0x005CB3), 0);
+  lv_obj_set_style_bg_opa(selectBankBottomBar_, LV_OPA_COVER, 0);
+  lv_obj_set_style_border_width(selectBankBottomBar_, 0, 0);
+  lv_obj_set_style_pad_all(selectBankBottomBar_, 0, 0);
+  lv_obj_clear_flag(selectBankBottomBar_, LV_OBJ_FLAG_SCROLLABLE);
+
+  selectBankInfoLabel_.parent(selectBank_);
+  lv_obj_set_parent(selectBankInfoLabel_.native(), selectBankBottomBar_);
+  selectBankInfoLabel_.font(&notosanslao_shaped_20);
+  selectBankInfoLabel_.textColor(0xFFFFFF);
+  selectBankInfoLabel_.align(Align::Center, 0, 0);
+  lv_obj_set_style_text_align(selectBankInfoLabel_.native(), LV_TEXT_ALIGN_CENTER, 0);
+}
+
 void WasherView::buildPinPage() {
   configurePage(pinPage_, 0x101820);
   pinBack_.parent(pinPage_);
@@ -2483,8 +2599,8 @@ void WasherView::show(Page page) {
   const Page prevPage = currentPage_;
   currentPage_ = page;
   pageEnteredAt_ = millis();
-  Rect* pages[] = {&home_, &select_, &qr_, &payment_, &paymentSuccess_, &running_, &success_, &pause_, &pinPage_, &settingsPage_, &wifiScanPage_};
-  for (uint8_t i = 0; i < 11; ++i) pages[i]->hidden(i != static_cast<uint8_t>(page));
+  Rect* pages[] = {&home_, &select_, &qr_, &payment_, &paymentSuccess_, &running_, &success_, &pause_, &pinPage_, &settingsPage_, &wifiScanPage_, &selectBank_};
+  for (uint8_t i = 0; i < 12; ++i) pages[i]->hidden(i != static_cast<uint8_t>(page));
 
   if (page == Page::Payment && paymentCard_) {
     triggerPopupBounce(paymentCard_);
@@ -2844,8 +2960,65 @@ void WasherView::setPrice(uint8_t option, uint32_t price) {
   prices_[option - 1] = price;
   String text = numberFormat(price) + " LAK";
   priceLabels_[option - 1].text(text.c_str());
-  if (currentPage_ == Page::QrCode && option == qrSelectedOption_) {
-    updateQrInfo(option);
+  if (option == qrSelectedOption_) {
+    if (currentPage_ == Page::QrCode) updateQrInfo(option);
+    if (currentPage_ == Page::SelectBank) updateSelectBankInfo(option);
+  }
+}
+
+void WasherView::setSelectBankOption(uint8_t option) {
+  if (option < 1 || option > 3) return;
+  qrSelectedOption_ = option;
+  const uint32_t barColors[3] = {0x005CB3, 0xD68F00, 0xCC2900};
+  if (selectBankBottomBar_) {
+    lv_obj_set_style_bg_color(selectBankBottomBar_, lv_color_hex(barColors[option - 1]), 0);
+  }
+  updateSelectBankInfo(option);
+}
+
+void WasherView::updateSelectBankInfo(uint8_t option) {
+  if (option < 1 || option > 3) return;
+  const char* tempNames[3] = {"ນ້ຳເຢັນ COLD", "ນ້ຳອຸ່ນ WARM", "ນ້ຳຮ້ອນ HOT"};
+  String priceText = numberFormat(prices_[option - 1]) + " LAK";
+  char buf[256];
+  snprintf(buf, sizeof(buf), "ອຸນຫະພູມ: %s | ລາຄາ/Price: %s",
+           tempNames[option - 1], priceText.c_str());
+  selectBankInfoLabel_.text(buf);
+}
+
+void WasherView::setSelectedBank(const char* bankCode) {
+  if (!qrLapnetImg_) return;
+  if (!bankCode || strcmp(bankCode, "lapnet") == 0) {
+    lv_img_set_src(qrLapnetImg_, &img_lapnet);
+    lv_obj_align(qrLapnetImg_, LV_ALIGN_CENTER, 0, 0);
+    if (qrLapnetTitle_) lv_obj_add_flag(qrLapnetTitle_, LV_OBJ_FLAG_HIDDEN);
+    return;
+  }
+  struct BankMeta {
+    const char* code;
+    const char* label;
+    uint32_t color;
+    const lv_img_dsc_t* icon76;
+  };
+  static const BankMeta kMeta[6] = {
+    {"bcel",    "BCEL OnePay", 0xE11D48, &img_bank_bcel_76},
+    {"jdb",     "JDB Yes Pay", 0x0284C7, &img_bank_jdb_76},
+    {"ldb",     "LDB Trust",   0x2563EB, &img_bank_ldb_76},
+    {"ib",      "IB Cool",     0x7C3AED, &img_bank_ib_76},
+    {"stb",     "ST Bank",     0x059669, &img_bank_stb_76},
+    {"m-money", "M-MoneyX",    0xEA580C, &img_bank_mmoney_76},
+  };
+  for (uint8_t i = 0; i < 6; ++i) {
+    if (strcmp(bankCode, kMeta[i].code) == 0) {
+      lv_img_set_src(qrLapnetImg_, kMeta[i].icon76);
+      lv_obj_align(qrLapnetImg_, LV_ALIGN_TOP_MID, 0, 12);
+      if (qrLapnetTitle_) {
+        lv_label_set_text(qrLapnetTitle_, kMeta[i].label);
+        lv_obj_set_style_text_color(qrLapnetTitle_, lv_color_hex(kMeta[i].color), 0);
+        lv_obj_clear_flag(qrLapnetTitle_, LV_OBJ_FLAG_HIDDEN);
+      }
+      return;
+    }
   }
 }
 
@@ -3164,6 +3337,15 @@ void WasherView::priceCardClicked(lv_event_t* event) {
   const uint8_t option = static_cast<uint8_t>(reinterpret_cast<uintptr_t>(lv_event_get_user_data(event)));
   if (option >= 1 && option <= 3) {
     instance_->listener_->onOptionSelected(option);
+  }
+}
+
+void WasherView::bankCardClicked(lv_event_t* event) {
+  if (!instance_ || !instance_->listener_) return;
+  instance_->listener_->beep(1);
+  const char* bankCode = static_cast<const char*>(lv_event_get_user_data(event));
+  if (bankCode && bankCode[0] != '\0') {
+    instance_->listener_->onBankSelected(bankCode);
   }
 }
 

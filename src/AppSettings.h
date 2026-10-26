@@ -21,7 +21,9 @@ struct AppSettings {
   String wifiPassword2 = "Elephant_wash";
   bool wifiEnabled1 = true;
   bool wifiEnabled2 = true;
+  bool gatewayBcelMode = true;
 
   void load();
   void save() const;
+  void saveGatewayMode(bool bcelMode);
 };

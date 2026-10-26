@@ -14,6 +14,7 @@ class WasherController : public WasherViewListener {
   void update();
 
   void onOptionSelected(uint8_t option) override;
+  void onBankSelected(const char* bankCode) override;
   void onPricePageOpened() override;
   void onBackRequested() override;
   void onSettingsSaved() override;

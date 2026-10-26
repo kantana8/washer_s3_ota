@@ -18,7 +18,7 @@ struct RtcWashState {
 };
 
 constexpr uint32_t kRtcWashMagic = 0x57415348U; // 'WASH'
-constexpr char kFirmwareVersion[] = "3.5-v1.7";
+constexpr char kFirmwareVersion[] = "3.5-v1.8";
 RTC_NOINIT_ATTR RtcWashState s_rtcWashState;
 
 QueueHandle_t relayQueue = nullptr;
@@ -222,11 +222,31 @@ void WasherController::onOptionSelected(uint8_t option) {
   }
   selectedOption_ = option;
   qrCountdownStarted_ = false;
-  view_.show(Page::QrCode);
-  view_.setQrOption(option);
   view_.setPrice(option, prices_[option - 1]);
   pageTimeoutAt_ = millis() + config::PageTimeoutMs;
-  publish("tid/qrcode/option" + String(option), settings_.terminalId);
+  if (settings_.gatewayBcelMode) {
+    view_.setSelectedBank("lapnet");
+    view_.show(Page::QrCode);
+    view_.setQrOption(option);
+    publish("tid/qrcode/option" + String(option), settings_.terminalId);
+  } else {
+    view_.setSelectBankOption(option);
+    view_.show(Page::SelectBank);
+  }
+}
+
+void WasherController::onBankSelected(const char* bankCode) {
+  if (!selectedOption_ || selectedOption_ > 3 || !bankCode) return;
+  qrCountdownStarted_ = false;
+  view_.setSelectedBank(bankCode);
+  view_.show(Page::QrCode);
+  view_.setQrOption(selectedOption_);
+  view_.setPrice(selectedOption_, prices_[selectedOption_ - 1]);
+  pageTimeoutAt_ = millis() + config::PageTimeoutMs;
+  const uint32_t rnd = (esp_random() % 9000U) + 1000U;
+  const String billId = settings_.terminalId + "-B" + String(selectedOption_) + String(rnd);
+  const String payload = settings_.terminalId + "," + String(bankCode) + "," + String(prices_[selectedOption_ - 1]) + "," + billId;
+  publish("tid/qrcode/option" + String(selectedOption_), payload);
 }
 
 void WasherController::onPricePageOpened() {
@@ -248,6 +268,14 @@ void WasherController::onPricePageOpened() {
 void WasherController::onBackRequested() {
   qrCountdownStarted_ = false;
   if (view_.page() == Page::QrCode) {
+    if (settings_.gatewayBcelMode) {
+      view_.show(Page::Select);
+    } else {
+      view_.setSelectBankOption(selectedOption_);
+      view_.show(Page::SelectBank);
+    }
+    pageTimeoutAt_ = millis() + config::PageTimeoutMs;
+  } else if (view_.page() == Page::SelectBank) {
     view_.show(Page::Select);
     pageTimeoutAt_ = millis() + config::PageTimeoutMs;
   } else {
@@ -379,6 +407,20 @@ void WasherController::handleMqtt(const String& topic, const String& message) {
   if (topic == settings_.terminalId + "/pulse/statas" || topic == settings_.terminalId + "/pulse/status") {
     publishConfiguration();
   }
+  if (topic == tidTopic("/gateway") || topic == settings_.terminalId + "/gateway") {
+    String gw = message;
+    gw.trim();
+    gw.toLowerCase();
+    const bool bcelMode = (gw != "phajay");
+    if (settings_.gatewayBcelMode != bcelMode) {
+      settings_.saveGatewayMode(bcelMode);
+      Serial.printf("[GATEWAY] Updated gateway mode to %s\n", bcelMode ? "BCEL (Direct QR)" : "Phajay (Select Bank)");
+    }
+    if (bcelMode && view_.page() == Page::SelectBank) {
+      view_.show(Page::Select);
+    }
+    return;
+  }
   if (topic == tidTopic("/ota") || topic == settings_.terminalId + "/ota") {
     handleOtaRequest(message);
     return;
@@ -418,6 +460,7 @@ void WasherController::reconnectMqtt() {
 
 void WasherController::subscribeTopics() {
   mqtt_.subscribe(tidTopic("/#").c_str());
+  mqtt_.subscribe((settings_.terminalId + "/gateway").c_str());
   mqtt_.subscribe((settings_.terminalId + "/start_test").c_str());
   mqtt_.subscribe((settings_.terminalId + "/ota").c_str());
   mqtt_.subscribe((settings_.terminalId + "/pulse/statas").c_str());
