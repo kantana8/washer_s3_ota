@@ -18,7 +18,7 @@ struct RtcWashState {
 };
 
 constexpr uint32_t kRtcWashMagic = 0x57415348U; // 'WASH'
-constexpr char kFirmwareVersion[] = "3.5-v1.9";
+constexpr char kFirmwareVersion[] = "3.5-v2.0";
 RTC_NOINIT_ATTR RtcWashState s_rtcWashState;
 
 QueueHandle_t relayQueue = nullptr;
