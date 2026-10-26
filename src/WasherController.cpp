@@ -18,10 +18,11 @@ struct RtcWashState {
 };
 
 constexpr uint32_t kRtcWashMagic = 0x57415348U; // 'WASH'
-constexpr char kFirmwareVersion[] = "3.5-v1.3";
+constexpr char kFirmwareVersion[] = "3.5-v1.4";
 RTC_NOINIT_ATTR RtcWashState s_rtcWashState;
 
 QueueHandle_t relayQueue = nullptr;
+volatile uint32_t s_relayCompletedCount = 0;
 
 void relayTaskFunc(void* /*param*/) {
   uint8_t count = 0;
@@ -36,6 +37,7 @@ void relayTaskFunc(void* /*param*/) {
         vTaskDelay(pdMS_TO_TICKS(120)); // 120ms LOW (total period: 200ms >= 180ms min spec)
       }
       digitalWrite(config::RelayPin, LOW);
+      s_relayCompletedCount += count;
       Serial.printf("[RELAY] %u pulses completed\n", count);
     }
   }
@@ -120,6 +122,10 @@ void WasherController::update() {
       publish("tid/status", settings_.terminalId + "/working_done/option" + String(pendingWorkingDoneOption_));
       publish(countdownTopic(pendingWorkingDoneOption_), "{\"current_page\":6,\"countdown\":0}", true);
       pendingWorkingDoneOption_ = 0;
+    }
+    if (pendingStartTestAck_ && static_cast<int32_t>(s_relayCompletedCount - pendingStartTestTarget_) >= 0) {
+      pendingStartTestAck_ = false;
+      publish("tid/status", settings_.terminalId + "/start_test_ok/1_pulse");
     }
     // Auto-Recovery: return to Home page when connection is restored if currently on Pause page, but NOT if server set it offline
     if (!activeOption_ && view_.page() == Page::Pause && !isOffline_ && !optionOffline_[0]) {
@@ -363,7 +369,13 @@ void WasherController::handleMqtt(const String& topic, const String& message) {
     else if (message == "stop") stopWash(true);
     return;
   }
-  if (topic == tidTopic("/start_test") && message == "click") beginRelayPulses(1);
+  if ((topic == tidTopic("/start_test") || topic == settings_.terminalId + "/start_test") && message == "click") {
+    pendingStartTestTarget_ = s_relayCompletedCount + 1;
+    pendingStartTestAck_ = true;
+    beginRelayPulses(1);
+    beep(1);
+    return;
+  }
   if (topic == settings_.terminalId + "/pulse/statas" || topic == settings_.terminalId + "/pulse/status") {
     publishConfiguration();
   }
@@ -406,6 +418,7 @@ void WasherController::reconnectMqtt() {
 
 void WasherController::subscribeTopics() {
   mqtt_.subscribe(tidTopic("/#").c_str());
+  mqtt_.subscribe((settings_.terminalId + "/start_test").c_str());
   mqtt_.subscribe((settings_.terminalId + "/ota").c_str());
   mqtt_.subscribe((settings_.terminalId + "/pulse/statas").c_str());
   mqtt_.subscribe((settings_.terminalId + "/pulse/status").c_str());

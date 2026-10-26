@@ -4,9 +4,9 @@
 
 namespace config {
 
-constexpr char FirmwareVersion[] = "v1.3";
+constexpr char FirmwareVersion[] = "v1.4";
 
-constexpr char MqttHost[] = "broker.emqx.io";
+constexpr char MqttHost[] = "broker.hivemq.com";
 constexpr uint16_t MqttPort = 1883;
 constexpr char MqttUser[] = "";
 constexpr char MqttPassword[] = "";
