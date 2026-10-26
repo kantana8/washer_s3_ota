@@ -1088,14 +1088,8 @@ void WasherView::buildPages() {
 
   lv_obj_t* qrLapnetImg = lv_img_create(qrLapnetCard_);
   lv_img_set_src(qrLapnetImg, &img_lapnet);
-  lv_obj_align(qrLapnetImg, LV_ALIGN_TOP_MID, 0, 12);
+  lv_obj_center(qrLapnetImg);
   lv_obj_clear_flag(qrLapnetImg, LV_OBJ_FLAG_CLICKABLE);
-
-  lv_obj_t* qrLapnetTitle = lv_label_create(qrLapnetCard_);
-  lv_label_set_text(qrLapnetTitle, shapeLaoText("ທຸກທະນາຄານ").c_str());
-  lv_obj_set_style_text_font(qrLapnetTitle, &notosanslao_shaped_20, 0);
-  lv_obj_set_style_text_color(qrLapnetTitle, lv_color_hex(0x2B4C6B), 0);
-  lv_obj_align(qrLapnetTitle, LV_ALIGN_BOTTOM_MID, 0, -6);
 
   // Right-side QR Page Countdown Timer Card (centered in the right space x=356..468)
   qrTimeoutCard_ = lv_obj_create(qr_.native());
