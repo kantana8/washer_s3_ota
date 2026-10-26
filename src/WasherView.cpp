@@ -1070,6 +1070,33 @@ void WasherView::buildPages() {
   qrLoadingLabel_.align(Align::BottomCenter, 0, -10);
   lv_obj_set_style_text_align(qrLoadingLabel_.native(), LV_TEXT_ALIGN_CENTER, 0);
 
+  // Left-side QR Page LAPNet All-Bank Card (centered in the left space x=12..124, matching qrTimeoutCard_)
+  qrLapnetCard_ = lv_obj_create(qr_.native());
+  lv_obj_set_size(qrLapnetCard_, 112, 134);
+  lv_obj_set_pos(qrLapnetCard_, 12, 103);
+  lv_obj_set_style_radius(qrLapnetCard_, 14, 0);
+  lv_obj_set_style_bg_color(qrLapnetCard_, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_bg_opa(qrLapnetCard_, LV_OPA_COVER, 0);
+  lv_obj_set_style_border_width(qrLapnetCard_, 2, 0);
+  lv_obj_set_style_border_color(qrLapnetCard_, lv_color_hex(0x1A8CFF), 0);
+  lv_obj_set_style_shadow_width(qrLapnetCard_, 14, 0);
+  lv_obj_set_style_shadow_opa(qrLapnetCard_, LV_OPA_20, 0);
+  lv_obj_set_style_shadow_color(qrLapnetCard_, lv_color_hex(0x173E59), 0);
+  lv_obj_set_style_shadow_ofs_y(qrLapnetCard_, 4, 0);
+  lv_obj_set_style_pad_all(qrLapnetCard_, 0, 0);
+  lv_obj_clear_flag(qrLapnetCard_, LV_OBJ_FLAG_SCROLLABLE);
+
+  lv_obj_t* qrLapnetImg = lv_img_create(qrLapnetCard_);
+  lv_img_set_src(qrLapnetImg, &img_lapnet);
+  lv_obj_align(qrLapnetImg, LV_ALIGN_TOP_MID, 0, 12);
+  lv_obj_clear_flag(qrLapnetImg, LV_OBJ_FLAG_CLICKABLE);
+
+  lv_obj_t* qrLapnetTitle = lv_label_create(qrLapnetCard_);
+  lv_label_set_text(qrLapnetTitle, shapeLaoText("ທຸກທະນາຄານ").c_str());
+  lv_obj_set_style_text_font(qrLapnetTitle, &notosanslao_shaped_20, 0);
+  lv_obj_set_style_text_color(qrLapnetTitle, lv_color_hex(0x2B4C6B), 0);
+  lv_obj_align(qrLapnetTitle, LV_ALIGN_BOTTOM_MID, 0, -6);
+
   // Right-side QR Page Countdown Timer Card (centered in the right space x=356..468)
   qrTimeoutCard_ = lv_obj_create(qr_.native());
   lv_obj_set_size(qrTimeoutCard_, 112, 134);
@@ -2874,6 +2901,11 @@ void WasherView::setQrOption(uint8_t option) {
   if (qrTimeoutCard_) {
     lv_obj_set_style_border_color(qrTimeoutCard_, lv_color_hex(mainColors[idx]), 0);
   }
+  if (qrLapnetCard_) {
+    lv_obj_set_style_border_color(qrLapnetCard_, lv_color_hex(mainColors[idx]), 0);
+    lv_obj_clear_flag(qrLapnetCard_, LV_OBJ_FLAG_HIDDEN);
+    triggerPopupBounce(qrLapnetCard_);
+  }
   if (qrTimeoutArc_) {
     lv_obj_set_style_arc_color(qrTimeoutArc_, lv_color_hex(mainColors[idx]), LV_PART_INDICATOR);
   }
@@ -2925,7 +2957,12 @@ void WasherView::revealQrCode() {
     if (qrLoadingBox_) lv_obj_add_flag(qrLoadingBox_, LV_OBJ_FLAG_HIDDEN);
     if (qrCard_) {
       lv_obj_clear_flag(qrCard_, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_move_foreground(laoQr_.native());
       triggerPopupBounce(qrCard_);
+    }
+    if (qrLapnetCard_) {
+      lv_obj_clear_flag(qrLapnetCard_, LV_OBJ_FLAG_HIDDEN);
+      triggerPopupBounce(qrLapnetCard_);
     }
     qrTimeoutSec_ = 0;
     setQrTimeoutSeconds(config::QrScanTimeoutMs / 1000U);

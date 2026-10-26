@@ -153,6 +153,7 @@ class WasherView {
   lv_obj_t* qrLoadingBubbles_[4] = {};
   washerui::Label qrLoadingLabel_{"ກຳລັງໂຫຼດ"};
   lv_obj_t* qrTimeoutCard_ = nullptr;
+  lv_obj_t* qrLapnetCard_ = nullptr;
   lv_obj_t* qrTimeoutArc_ = nullptr;
   lv_obj_t* qrTimeoutValLabel_ = nullptr;
   uint32_t qrTimeoutSec_ = 30;
